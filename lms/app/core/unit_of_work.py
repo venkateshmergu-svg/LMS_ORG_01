@@ -21,10 +21,20 @@ class UnitOfWork:
     Unit of Work context manager for transactional request handling.
     
     Usage:
+        # Context manager mode
         with UnitOfWork(session) as uow:
             # Use uow.session in repositories/engines
             # On normal exit: commits transaction
             # On exception: rolls back transaction
+        
+        # Explicit mode
+        uow = UnitOfWork(session)
+        uow.begin()
+        try:
+            # do work
+            uow.commit()
+        except:
+            uow.rollback()
     """
     
     def __init__(self, session: Session) -> None:
@@ -35,34 +45,65 @@ class UnitOfWork:
         """
         self.session = session
         self._transaction: Any = None
+        self._completed = False
+    
+    def begin(self) -> None:
+        """Begin a transaction explicitly.
+        
+        Can be called outside of context manager for explicit control.
+        """
+        if not self._transaction:
+            self._transaction = self.session.begin()
+    
+    def commit(self) -> None:
+        """Commit the current transaction explicitly.
+        
+        Guard against double-commit with _completed flag.
+        """
+        if self._completed:
+            return
+        
+        if self._transaction:
+            self._transaction.commit()
+            self._completed = True
+    
+    def rollback(self) -> None:
+        """Rollback the current transaction explicitly.
+        
+        Guard against double-rollback with _completed flag.
+        """
+        if self._completed:
+            return
+        
+        if self._transaction:
+            self._transaction.rollback()
+            self._completed = True
     
     def __enter__(self) -> UnitOfWork:
-        """Begin transaction.
+        """Begin transaction in context manager mode.
         
         Returns:
             Self, for use in with statements
         """
-        self._transaction = self.session.begin()
+        self.begin()
         return self
     
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Commit on success, rollback on exception, always close session.
         
         Args:
-            exc_type: Exception type if an exception occurred, else None
-            exc_val: Exception instance if an exception occurred, else None
-            exc_tb: Traceback if an exception occurred, else None
-        
-        Returns:
-            None to NOT suppress exceptions (let them propagate)
+            exc_type: Exception type if exception occurred
+            exc_val: Exception value if exception occurred
+            exc_tb: Exception traceback if exception occurred
         """
         try:
-            if exc_type is not None:
-                # Exception occurred; rollback transaction
-                self._transaction.rollback()
+            if exc_type is None:
+                # Success: commit the transaction
+                self.commit()
             else:
-                # No exception; commit transaction
-                self._transaction.commit()
+                # Exception: rollback the transaction
+                self.rollback()
         finally:
-            # Always close the session, regardless of commit/rollback outcome
-            self.session.close()
+            # Always close the session
+            if self.session.is_active:
+                self.session.close()
