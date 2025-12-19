@@ -5,6 +5,10 @@ Controllers should depend on engines, not repositories directly.
 All dependencies are injected with a UnitOfWork instance that manages
 transaction lifecycle. All repositories in a single request share the same
 database session and participate in a single transaction.
+
+Authentication:
+- get_authenticated_user: Validates JWT and returns user context
+- get_rbac_context: Provides role-based access control
 """
 
 from __future__ import annotations
@@ -16,6 +20,8 @@ from fastapi import Depends, Header
 from sqlalchemy.orm import Session
 
 from ..core.database import get_uow
+from ..core.security import AuthenticatedUser, get_authenticated_user
+from ..core.rbac import RBACContext, get_rbac_context
 from ..core.unit_of_work import UnitOfWork
 from ..engines import AuditEngine, LeaveEngine, PolicyEngine, UserEngine, WorkflowEngine
 from ..repositories import (
@@ -42,12 +48,36 @@ def get_audit_context(
     x_organization_id: Optional[str] = Header(default=None),
     x_request_id: Optional[str] = Header(default=None),
     x_session_id: Optional[str] = Header(default=None),
+    auth_user: Optional[AuthenticatedUser] = Depends(get_authenticated_user),
 ) -> AuditContext:
-    actor_id: Optional[UUID] = UUID(x_actor_id) if x_actor_id else None
-    org_id: Optional[UUID] = UUID(x_organization_id) if x_organization_id else None
+    """Build audit context from headers and authenticated user.
+    
+    If JWT authentication is enabled, auth_user will be populated.
+    Falls back to header-based context if JWT is not used.
+    
+    Args:
+        x_actor_id: Header override for actor_id
+        x_organization_id: Header override for organization_id
+        x_request_id: Request tracking ID
+        x_session_id: Session tracking ID
+        auth_user: Authenticated user from JWT (optional)
+        
+    Returns:
+        AuditContext with actor and organization info
+    """
+    # Use authenticated user if available, fall back to headers
+    if auth_user:
+        actor_id = auth_user.user_id
+        org_id = auth_user.organization_id
+        actor_type = "user"
+    else:
+        actor_id = UUID(x_actor_id) if x_actor_id else None
+        org_id = UUID(x_organization_id) if x_organization_id else None
+        actor_type = "system" if actor_id is None else "user"
+    
     return AuditContext(
         actor_id=actor_id,
-        actor_type="system" if actor_id is None else "user",
+        actor_type=actor_type,
         organization_id=org_id,
         request_id=x_request_id,
         session_id=x_session_id,
