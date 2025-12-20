@@ -20,8 +20,8 @@ from fastapi import Depends, Header
 from sqlalchemy.orm import Session
 
 from ..core.database import get_uow
-from ..core.security import AuthenticatedUser, get_authenticated_user
 from ..core.rbac import RBACContext, get_rbac_context
+from ..core.security import AuthenticatedUser, get_authenticated_user
 from ..core.unit_of_work import UnitOfWork
 from ..engines import AuditEngine, LeaveEngine, PolicyEngine, UserEngine, WorkflowEngine
 from ..repositories import (
@@ -51,30 +51,30 @@ def get_audit_context(
     auth_user: Optional[AuthenticatedUser] = Depends(get_authenticated_user),
 ) -> AuditContext:
     """Build audit context from headers and authenticated user.
-    
+
     If JWT authentication is enabled, auth_user will be populated.
     Falls back to header-based context if JWT is not used.
-    
+
     Args:
         x_actor_id: Header override for actor_id
         x_organization_id: Header override for organization_id
         x_request_id: Request tracking ID
         x_session_id: Session tracking ID
         auth_user: Authenticated user from JWT (optional)
-        
+
     Returns:
         AuditContext with actor and organization info
     """
     # Use authenticated user if available, fall back to headers
     if auth_user:
-        actor_id = auth_user.user_id
-        org_id = auth_user.organization_id
+        actor_id: Optional[UUID] = auth_user.user_id
+        org_id: Optional[UUID] = auth_user.organization_id
         actor_type = "user"
     else:
         actor_id = UUID(x_actor_id) if x_actor_id else None
         org_id = UUID(x_organization_id) if x_organization_id else None
         actor_type = "system" if actor_id is None else "user"
-    
+
     return AuditContext(
         actor_id=actor_id,
         actor_type=actor_type,
@@ -101,7 +101,7 @@ def get_leave_engine(
     ctx: AuditContext = Depends(get_audit_context),
 ) -> LeaveEngine:
     """Inject LeaveEngine with transactional session and all repositories from UnitOfWork.
-    
+
     All repositories in this request share the same session and transaction,
     ensuring atomicity of leave request operations.
     """
@@ -116,7 +116,9 @@ def get_leave_engine(
 
     request_repo = LeaveRequestRepository(uow.session, audit_repo=audit_repo)
     request_date_repo = LeaveRequestDateRepository(uow.session, audit_repo=audit_repo)
-    request_comment_repo = LeaveRequestCommentRepository(uow.session, audit_repo=audit_repo)
+    request_comment_repo = LeaveRequestCommentRepository(
+        uow.session, audit_repo=audit_repo
+    )
 
     # Other repos (not yet used by skeleton but wired for future engines)
     BalanceTransactionRepository(uow.session, audit_repo=audit_repo)

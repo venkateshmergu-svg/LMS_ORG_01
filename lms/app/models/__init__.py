@@ -1,6 +1,7 @@
 """
 Models package - exports all SQLAlchemy models.
 """
+
 from .audit import (
     AuditLog,
     AuditLogArchive,
@@ -10,6 +11,7 @@ from .calendar import (
     Holiday,
     HolidayCalendar,
 )
+from .integration import PayrollExportRecord
 from .leave import (
     AccrualSchedule,
     BalanceTransaction,
@@ -73,4 +75,6 @@ __all__ = [
     # Notification
     "NotificationTemplate",
     "Notification",
+    # Integrations
+    "PayrollExportRecord",
 ]

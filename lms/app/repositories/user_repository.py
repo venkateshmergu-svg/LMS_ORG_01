@@ -27,6 +27,12 @@ class DepartmentRepository(BaseRepository[Department]):
     def __init__(self, session: Session, *, audit_repo=None):
         super().__init__(session, Department, audit_repo=audit_repo)
 
+    def get_by_code(self, organization_id: UUID, code: str) -> Optional[Department]:
+        stmt = select(Department).where(
+            Department.organization_id == organization_id, Department.code == code
+        )
+        return self.session.execute(stmt).scalars().first()
+
 
 class UserRepository(BaseRepository[User]):
     def __init__(self, session: Session, *, audit_repo=None):
@@ -50,6 +56,10 @@ class UserRepository(BaseRepository[User]):
             raise DuplicateEntityException("User", "employee_id", employee_id)
         return self.add(user, ctx=ctx)
 
-    def set_manager(self, user_id: UUID, manager_id: Optional[UUID], *, ctx: AuditContext) -> User:
+    def set_manager(
+        self, user_id: UUID, manager_id: Optional[UUID], *, ctx: AuditContext
+    ) -> User:
         user = self.get_required(user_id)
-        return self.update_fields(user, {"manager_id": manager_id}, ctx=ctx, description="Set manager")
+        return self.update_fields(
+            user, {"manager_id": manager_id}, ctx=ctx, description="Set manager"
+        )

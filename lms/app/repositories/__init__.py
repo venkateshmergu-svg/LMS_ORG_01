@@ -4,6 +4,7 @@ from .audit_context import AuditContext
 from .audit_repository import AuditRepository
 from .base import BaseRepository
 from .calendar_repository import HolidayCalendarRepository, HolidayRepository
+from .integration_repository import PayrollExportRepository
 from .leave_repository import (
     AccrualScheduleRepository,
     BalanceTransactionRepository,
@@ -60,4 +61,6 @@ __all__ = [
     # Notification
     "NotificationTemplateRepository",
     "NotificationRepository",
+    # Integrations
+    "PayrollExportRepository",
 ]

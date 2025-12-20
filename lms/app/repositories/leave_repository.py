@@ -26,7 +26,9 @@ class LeaveTypeRepository(BaseRepository[LeaveType]):
         super().__init__(session, LeaveType, audit_repo=audit_repo)
 
     def get_by_code(self, organization_id: UUID, code: str) -> Optional[LeaveType]:
-        stmt = select(LeaveType).where(LeaveType.organization_id == organization_id, LeaveType.code == code)
+        stmt = select(LeaveType).where(
+            LeaveType.organization_id == organization_id, LeaveType.code == code
+        )
         return self.session.execute(stmt).scalars().first()
 
 
@@ -34,7 +36,9 @@ class LeavePolicyRepository(BaseRepository[LeavePolicy]):
     def __init__(self, session: Session, *, audit_repo=None):
         super().__init__(session, LeavePolicy, audit_repo=audit_repo)
 
-    def get_active_for_leave_type(self, organization_id: UUID, leave_type_id: UUID) -> list[LeavePolicy]:
+    def get_active_for_leave_type(
+        self, organization_id: UUID, leave_type_id: UUID
+    ) -> list[LeavePolicy]:
         stmt = (
             select(LeavePolicy)
             .where(LeavePolicy.organization_id == organization_id)
@@ -54,7 +58,9 @@ class LeaveBalanceRepository(BaseRepository[LeaveBalance]):
     def __init__(self, session: Session, *, audit_repo=None):
         super().__init__(session, LeaveBalance, audit_repo=audit_repo)
 
-    def get_current_balance(self, user_id: UUID, leave_type_id: UUID, on_date: date) -> Optional[LeaveBalance]:
+    def get_current_balance(
+        self, user_id: UUID, leave_type_id: UUID, on_date: date
+    ) -> Optional[LeaveBalance]:
         stmt = (
             select(LeaveBalance)
             .where(LeaveBalance.user_id == user_id)
@@ -69,17 +75,35 @@ class LeaveRequestRepository(BaseRepository[LeaveRequest]):
     def __init__(self, session: Session, *, audit_repo=None):
         super().__init__(session, LeaveRequest, audit_repo=audit_repo)
 
-    def find_overlaps(self, user_id: UUID, start: date, end: date) -> list[LeaveRequest]:
+    def find_overlaps(
+        self, user_id: UUID, start: date, end: date
+    ) -> list[LeaveRequest]:
         stmt = (
             select(LeaveRequest)
             .where(LeaveRequest.user_id == user_id)
             .where(
                 or_(
-                    and_(LeaveRequest.start_date <= start, LeaveRequest.end_date >= start),
+                    and_(
+                        LeaveRequest.start_date <= start, LeaveRequest.end_date >= start
+                    ),
                     and_(LeaveRequest.start_date <= end, LeaveRequest.end_date >= end),
-                    and_(LeaveRequest.start_date >= start, LeaveRequest.end_date <= end),
+                    and_(
+                        LeaveRequest.start_date >= start, LeaveRequest.end_date <= end
+                    ),
                 )
             )
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+    def list_approved_between(self, start: date, end: date) -> list[LeaveRequest]:
+        """List approved leave requests between date range (inclusive)."""
+        from ..core.enums import LeaveRequestStatus
+
+        stmt = (
+            select(LeaveRequest)
+            .where(LeaveRequest.status == LeaveRequestStatus.APPROVED)
+            .where(LeaveRequest.start_date <= end)
+            .where(LeaveRequest.end_date >= start)
         )
         return list(self.session.execute(stmt).scalars().all())
 

@@ -83,7 +83,9 @@ class LeaveEngine:
 
         # Resolve policy and eligibility via PolicyEngine.
         leave_type_pk = cast(UUID, leave_type.id)
-        resolution = self.policy_engine.resolve_policy_for_user(user=user, leave_type_id=leave_type_pk)
+        resolution = self.policy_engine.resolve_policy_for_user(
+            user=user, leave_type_id=leave_type_pk
+        )
         self.policy_engine.assert_eligible(user=user, policy=resolution.policy)
 
         req = LeaveRequest(
@@ -102,61 +104,64 @@ class LeaveEngine:
         # Persist per-day rows (simple contiguous expansion for skeleton).
         cur = start_date
         while cur <= end_date:
-            day = LeaveRequestDate(leave_request_id=req.id, leave_date=cur, day_value=1.0)
-            self.request_date_repo.add(day, ctx=ctx, description="Add leave request day")
+            day = LeaveRequestDate(
+                leave_request_id=req.id, leave_date=cur, day_value=1.0
+            )
+            self.request_date_repo.add(
+                day, ctx=ctx, description="Add leave request day"
+            )
             cur = date.fromordinal(cur.toordinal() + 1)
 
         return LeaveRequestCreated(leave_request=req)
 
     def submit(self, *, request_id: UUID, ctx: AuditContext) -> LeaveRequest:
         """Submit a leave request and instantiate its workflow.
-        
+
         Actions:
         1. Verify request is in DRAFT status
         2. Resolve applicable workflow definition
         3. Determine approvers (for now: request owner's manager chain)
         4. Instantiate workflow steps
         5. Transition request to PENDING_APPROVAL
-        
+
         Returns:
         - Updated LeaveRequest with status=PENDING_APPROVAL
-        
+
         Raises:
         - LeaveRequestNotFoundException: request not found
         - WorkflowStateException: request not in DRAFT status
         - WorkflowNotFoundException: no applicable workflow defined
         """
         req = self.request_repo.get_required(request_id)
-        
+
         # Verify request is in DRAFT status
         if req.status != LeaveRequestStatus.DRAFT:
             from ..core.exceptions import WorkflowStateException
+
             raise WorkflowStateException(
                 current_state=req.status.value,
-                attempted_action="submit (only DRAFT requests can be submitted)"
+                attempted_action="submit (only DRAFT requests can be submitted)",
             )
-        
+
         # Get user and organization context
         user = self.user_repo.get_required(cast(UUID, req.user_id))
         organization_id = cast(UUID, user.organization_id)
-        
+
         # Resolve workflow for this leave type
         workflow_resolution = self.workflow_engine.resolve_workflow(
             organization_id=organization_id,
             leave_request=req,
         )
-        
+
         # Determine approvers: start with user's manager
         # (In production, this would query a complex chain or policy rules)
         approver_ids: list[UUID] = []
         if user.manager_id:
             approver_ids.append(cast(UUID, user.manager_id))
-        
+
         if not approver_ids:
-            raise WorkflowNotFoundException(
-                leave_type=str(req.leave_type_id)
-            )
-        
+            raise WorkflowNotFoundException(leave_type=str(req.leave_type_id))
+
         # Instantiate workflow steps (creates step rows, marks first as PENDING)
         steps = self.workflow_engine.instantiate_steps(
             leave_request=req,
@@ -164,7 +169,7 @@ class LeaveEngine:
             approver_ids_in_order=approver_ids,
             ctx=ctx,
         )
-        
+
         # Transition leave request to PENDING_APPROVAL
         now = datetime.now(timezone.utc)
         updated = self.request_repo.update_fields(
@@ -176,17 +181,27 @@ class LeaveEngine:
             ctx=ctx,
             description="Submit leave request (workflow instantiated)",
         )
-        
+
         return updated
 
-    def add_comment(self, *, request_id: UUID, user_id: UUID, comment: str, is_internal: bool, ctx: AuditContext) -> LeaveRequestComment:
+    def add_comment(
+        self,
+        *,
+        request_id: UUID,
+        user_id: UUID,
+        comment: str,
+        is_internal: bool,
+        ctx: AuditContext,
+    ) -> LeaveRequestComment:
         c = LeaveRequestComment(
             leave_request_id=request_id,
             user_id=user_id,
             comment=comment,
             is_internal=is_internal,
         )
-        return self.request_comment_repo.add(c, ctx=ctx, description="Add leave request comment")
+        return self.request_comment_repo.add(
+            c, ctx=ctx, description="Add leave request comment"
+        )
 
     def approve_step(
         self,
@@ -197,18 +212,19 @@ class LeaveEngine:
         ctx: AuditContext,
     ) -> dict:
         """Approve a workflow step.
-        
+
         Delegates to WorkflowEngine for state machine logic.
         Returns dict with leave_request, is_final, status.
         """
         from .workflow_engine import StepActivated, WorkflowCompleted
+
         result = self.workflow_engine.approve(
             step_id=step_id,
             actor_user_id=actor_user_id,
             comment=comment,
             ctx=ctx,
         )
-        
+
         # Unwrap result union type
         if isinstance(result, WorkflowCompleted):
             return {
@@ -219,7 +235,9 @@ class LeaveEngine:
         else:
             # StepActivated
             return {
-                "leave_request": self.request_repo.get_required(cast(UUID, result.step.leave_request_id)),
+                "leave_request": self.request_repo.get_required(
+                    cast(UUID, result.step.leave_request_id)
+                ),
                 "is_final": result.is_final,
                 "status": LeaveRequestStatus.PENDING_APPROVAL,
             }
@@ -233,7 +251,7 @@ class LeaveEngine:
         ctx: AuditContext,
     ) -> dict:
         """Reject a workflow step.
-        
+
         Delegates to WorkflowEngine for state machine logic.
         Returns dict with leave_request, is_final, status.
         """
@@ -243,7 +261,7 @@ class LeaveEngine:
             comment=comment,
             ctx=ctx,
         )
-        
+
         return {
             "leave_request": result.leave_request,
             "is_final": True,
@@ -259,7 +277,7 @@ class LeaveEngine:
         ctx: AuditContext,
     ) -> dict:
         """Withdraw a leave request.
-        
+
         Delegates to WorkflowEngine for state machine logic.
         Returns dict with leave_request, is_final, status.
         """
@@ -269,9 +287,100 @@ class LeaveEngine:
             reason=reason,
             ctx=ctx,
         )
-        
+
         return {
             "leave_request": result.leave_request,
             "is_final": True,
             "status": result.final_status,
+        }
+
+    def get_leave_request(self, request_id: UUID) -> LeaveRequest:
+        """Get a leave request by ID.
+
+        Returns:
+            LeaveRequest model instance
+
+        Raises:
+            EntityNotFoundException: if request not found
+        """
+        return self.request_repo.get_required(request_id)
+
+    def get_workflow_step(self, step_id: UUID):
+        """Get a workflow step by ID.
+
+        Returns:
+            WorkflowStep model instance with assigned_users attribute
+
+        Raises:
+            EntityNotFoundException: if step not found
+        """
+        from ..models.workflow import WorkflowStep
+        from ..repositories import WorkflowStepRepository
+
+        # Get the step
+        step_repo = WorkflowStepRepository(self.session)
+        step = step_repo.get_required(step_id)
+
+        # Add assigned_users list for RBAC check
+        # For now, just return approver_id as a single-item list
+        setattr(step, "assigned_users", [cast(UUID, step.approver_id)])
+        return step
+
+    def list_leave_requests(self, user_id: Optional[UUID] = None) -> list[LeaveRequest]:
+        """List leave requests, optionally filtered by user.
+
+        Args:
+            user_id: Optional user ID to filter by
+
+        Returns:
+            List of LeaveRequest model instances
+        """
+        if user_id:
+            from sqlalchemy import select
+
+            stmt = select(LeaveRequest).where(LeaveRequest.user_id == user_id)
+            return list(self.session.execute(stmt).scalars().all())
+        else:
+            return self.request_repo.list()
+
+    def get_leave_balance(self, user_id: UUID) -> dict:
+        """Get leave balance summary for a user.
+
+        Args:
+            user_id: User ID to get balance for
+
+        Returns:
+            Dictionary with balance information by leave type
+        """
+        from sqlalchemy import select
+
+        from ..models.leave import LeaveBalance
+        from ..repositories import LeaveBalanceRepository
+
+        balance_repo = LeaveBalanceRepository(self.session)
+        stmt = select(LeaveBalance).where(LeaveBalance.user_id == user_id)
+        balances = list(self.session.execute(stmt).scalars().all())
+
+        return {
+            "user_id": str(user_id),
+            "balances": [
+                {
+                    "leave_type_id": str(b.leave_type_id),
+                    "opening_balance": float(b.opening_balance),
+                    "accrued": float(b.accrued),
+                    "used": float(b.used),
+                    "pending": float(b.pending),
+                    "adjusted": float(b.adjusted),
+                    "carried_forward": float(b.carried_forward),
+                    "available": float(
+                        b.opening_balance
+                        + b.accrued
+                        + b.adjusted
+                        + b.carried_forward
+                        - b.used
+                        - b.pending
+                    ),
+                }
+                for b in balances
+            ],
         }

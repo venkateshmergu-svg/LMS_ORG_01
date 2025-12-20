@@ -6,7 +6,7 @@ Do not put business logic here; tasks call engines/repositories.
 
 from __future__ import annotations
 
-from celery import Celery  # pyright: ignore[reportMissingTypeStubs]
+from celery import Celery  # type: ignore[import]
 
 from ..core.config import get_settings
 

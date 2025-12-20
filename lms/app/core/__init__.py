@@ -1,6 +1,7 @@
 """
 Core module - database, config, enums, and exceptions.
 """
+
 from .config import Settings, get_settings
 from .database import Base, SessionLocal, engine, get_db
 from .enums import (
@@ -41,6 +42,7 @@ from .exceptions import (
     WorkflowNotFoundException,
     WorkflowStateException,
 )
+from .logging import configure_logging, get_request_id, get_user_id, log_context
 
 __all__ = [
     # Database
@@ -51,6 +53,11 @@ __all__ = [
     # Config
     "Settings",
     "get_settings",
+    # Logging
+    "configure_logging",
+    "log_context",
+    "get_request_id",
+    "get_user_id",
     # Enums
     "UserRole",
     "UserStatus",
