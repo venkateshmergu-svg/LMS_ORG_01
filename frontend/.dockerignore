@@ -1,0 +1,37 @@
+# Docker build/runtime artifacts
+.git
+.gitignore
+node_modules
+npm-debug.log
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation (not needed in runtime image)
+*.md
+!README.md
+
+# Development files
+.env.local
+.env.*.local
+*.log
+.vscode
+.idea
+coverage
+.nyc_output
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__tests__
+__mocks__
+
+# Build artifacts (we rebuild in Docker)
+dist
+build
+
+# OS files
+.DS_Store
+Thumbs.db

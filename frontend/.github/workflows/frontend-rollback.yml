@@ -1,0 +1,190 @@
+# ============================================================
+# LMS FRONTEND ROLLBACK WORKFLOW
+# ============================================================
+# Emergency rollback procedure for production incidents
+# Target: < 15 minutes rollback time
+# ============================================================
+
+name: Frontend Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: 'Target version to rollback to (e.g., 1.2.3)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - test
+          - development
+      reason:
+        description: 'Reason for rollback (required for audit)'
+        required: true
+        type: string
+      incident_id:
+        description: 'Incident/ticket ID (if applicable)'
+        required: false
+        type: string
+
+jobs:
+  # ============================================================
+  # VALIDATE ROLLBACK
+  # ============================================================
+  validate:
+    name: Validate Rollback Request
+    runs-on: ubuntu-latest
+    
+    outputs:
+      artifact_name: ${{ steps.find.outputs.artifact_name }}
+      tag: ${{ steps.find.outputs.tag }}
+    
+    steps:
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.target_version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "❌ Invalid version format: ${{ inputs.target_version }}"
+            echo "Expected format: X.Y.Z or X.Y.Z-prerelease"
+            exit 1
+          fi
+          echo "✅ Version format valid: ${{ inputs.target_version }}"
+
+      - name: Find release artifact
+        id: find
+        run: |
+          TAG="v${{ inputs.target_version }}"
+          ARTIFACT_NAME="release-${{ inputs.target_version }}"
+          
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "artifact_name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
+          
+          echo "🔍 Looking for release: ${TAG}"
+
+      - name: Log rollback request
+        run: |
+          echo "📋 Rollback Request Details"
+          echo "==========================="
+          echo "Target Version: ${{ inputs.target_version }}"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Reason: ${{ inputs.reason }}"
+          echo "Incident ID: ${{ inputs.incident_id || 'N/A' }}"
+          echo "Requested by: ${{ github.actor }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  # ============================================================
+  # EXECUTE ROLLBACK
+  # ============================================================
+  rollback:
+    name: Execute Rollback
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Download release artifact
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: frontend-release.yml
+          name: ${{ needs.validate.outputs.artifact_name }}
+          path: dist
+        continue-on-error: true
+        id: download_release
+
+      - name: Fallback - Download from CI artifact
+        if: steps.download_release.outcome == 'failure'
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: frontend-ci.yml
+          commit: ${{ github.sha }}
+          name: lms-frontend-${{ inputs.target_version }}*
+          path: dist
+          search_artifacts: true
+
+      - name: Verify artifact
+        run: |
+          if [ -f dist/build-manifest.json ]; then
+            echo "✅ Build manifest found"
+            cat dist/build-manifest.json
+            
+            ARTIFACT_VERSION=$(cat dist/build-manifest.json | jq -r '.version')
+            if [ "${ARTIFACT_VERSION}" != "${{ inputs.target_version }}" ]; then
+              echo "⚠️ Warning: Artifact version (${ARTIFACT_VERSION}) differs from target (${{ inputs.target_version }})"
+            fi
+          else
+            echo "⚠️ Build manifest not found - proceeding with caution"
+          fi
+
+      - name: Deploy rollback
+        run: |
+          echo "🔄 Executing rollback to ${{ inputs.target_version }}"
+          echo "Environment: ${{ inputs.environment }}"
+          echo ""
+          echo "Deployment commands would go here:"
+          echo "# aws s3 sync dist/ s3://lms-frontend-${{ inputs.environment }}/ --delete"
+          echo "# aws cloudfront create-invalidation ..."
+          
+      - name: Verify rollback
+        run: |
+          echo "🔍 Verifying rollback..."
+          echo "Expected version: ${{ inputs.target_version }}"
+          # Add actual verification (e.g., curl the deployed app's version endpoint)
+
+  # ============================================================
+  # AUDIT & NOTIFICATION
+  # ============================================================
+  audit:
+    name: Audit & Notify
+    needs: [validate, rollback]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Create audit record
+        run: |
+          cat > rollback-audit.json << EOF
+          {
+            "event": "ROLLBACK",
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "actor": "${{ github.actor }}",
+            "target_version": "${{ inputs.target_version }}",
+            "environment": "${{ inputs.environment }}",
+            "reason": "${{ inputs.reason }}",
+            "incident_id": "${{ inputs.incident_id || 'N/A' }}",
+            "workflow_run_id": "${{ github.run_id }}",
+            "status": "${{ needs.rollback.result }}",
+            "duration_seconds": "${{ github.run_number }}"
+          }
+          EOF
+          
+          echo "📝 Audit Record:"
+          cat rollback-audit.json
+
+      - name: Upload audit record
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-audit-${{ github.run_id }}
+          path: rollback-audit.json
+          retention-days: 365
+
+      - name: Send notification
+        if: always()
+        run: |
+          STATUS="${{ needs.rollback.result }}"
+          if [ "${STATUS}" == "success" ]; then
+            echo "✅ Rollback completed successfully"
+            echo "Notification: Rollback to ${{ inputs.target_version }} completed for ${{ inputs.environment }}"
+          else
+            echo "❌ Rollback failed"
+            echo "Notification: URGENT - Rollback to ${{ inputs.target_version }} FAILED for ${{ inputs.environment }}"
+          fi
+          # Add actual notification (Slack, Teams, PagerDuty, etc.)
