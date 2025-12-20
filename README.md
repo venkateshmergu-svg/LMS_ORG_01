@@ -114,7 +114,82 @@ Start a worker (requires Redis and broker/backends configured):
 celery -A lms.app.workers.celery_app.celery_app worker -l info
 ```
 
+## Integrations (Phase 18)
+
+LMS integrates with external systems via a dedicated integration layer that preserves core architecture:
+
+- Clean boundaries: API → Integrations → Repositories → DB
+- Engines do not import integration code
+- Integrations call repositories only (no direct DB access)
+- Unit of Work manages transactions; integrations do not commit
+- All integration actions are auditable
+
+### HRIS (Inbound) — `app/integrations/hris/`
+
+- Interface (`HRISAdapter`) exposes: `fetch_departments()`, `fetch_employees()`
+- Stub adapter provided: `StubHRISAdapter`
+- Sync orchestrator: `HRISSyncService` maps HRIS data into `Organization`/`Department`/`User`
+- Behavior:
+  - Create new users/departments
+  - Update existing users/departments
+  - Soft-disable terminated users (`User.status = TERMINATED`)
+  - Emit audit events via repositories
+- Trigger:
+  - API: `POST /api/v1/integrations/hris/sync` (SYSTEM_ADMIN)
+  - Task: `lms.integrations.sync_hris`
+
+### Payroll (Outbound) — `app/integrations/payroll/`
+
+- Interface (`PayrollAdapter`) exposes: `export_leave_transactions(transactions)`
+- Stub adapter provided: `StubPayrollAdapter`
+- Export service: `PayrollExportService` collects APPROVED leaves in a date range
+- Idempotency: `PayrollExportRecord` tracks SENT exports via a unique key
+- Safety: Does not change leave state or deduct balances
+- Trigger:
+  - API: `POST /api/v1/integrations/payroll/export` (HR_ADMIN)
+  - Task: `lms.integrations.export_payroll`
+
+### Calendar (Thin) — `app/integrations/calendar/`
+
+- Read-only event generation from APPROVED leaves
+- Endpoint: `GET /api/v1/integrations/calendar/events?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` (HR_ADMIN)
+
+### Data Contracts
+
+- HRIS department/employee shapes defined in `hris/adapter.py`
+- Payroll transactions defined in `payroll/adapter.py`
+- Calendar events returned as simple JSON objects (employee, leave type, date range)
+
+### Error Handling & Safety
+
+- External failures are logged/audited and designed to be retried
+- Downstream adapter errors return safe responses (no HTTP 500 for downstream issues)
+- Domain logic is unchanged; integrations remain decoupled from engines
+
 ## Notes
 
 - This repo targets PostgreSQL types (e.g., `JSONB`, `INET`). SQLite is not supported for migrations/autogenerate.
 - `requirements.txt` must stay UTF-8 (CI/CD and `pip -r` depend on it).
+
+## Local DB via Docker Compose
+
+Start Postgres and Redis locally:
+
+```powershell
+docker compose up -d
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/lms_db"
+alembic upgrade head
+```
+
+Run API:
+
+```powershell
+$env:PYTHONPATH = "C:\Python_Programs\LMS_ORG_01"
+python -m uvicorn lms.app.main:app --reload
+```
+
+Optional: start Celery worker (requires Redis):
+
+```powershell
+celery -A lms.app.workers.celery_app.celery_app worker -l info
+```
