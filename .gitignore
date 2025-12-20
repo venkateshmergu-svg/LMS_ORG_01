@@ -24,3 +24,7 @@ System_VSCodeVersionInformation.txt
 
 # Docs (exclude large/binary specs by default)
 Technical Specification_LMS.pdf
+
+# Verification/Temp files
+*.txt
+*.bak
