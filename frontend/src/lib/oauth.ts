@@ -13,6 +13,12 @@ export const oauthConfig = {
  * Generate authorization URL for OAuth provider
  */
 export function getAuthorizationUrl(): string {
+  // Local-dev fallback: if no external authority/clientId is configured,
+  // short-circuit to an internal callback route that the backend accepts.
+  if (!oauthConfig.authority || !oauthConfig.clientId) {
+    return `${window.location.origin}/auth/callback?code=dev`;
+  }
+
   const params = new URLSearchParams({
     client_id: oauthConfig.clientId,
     redirect_uri: oauthConfig.redirectUri,
@@ -39,22 +45,23 @@ export async function exchangeCodeForTokens(code: string): Promise<{
   refresh_token: string;
   token_type: string;
 }> {
-  const response = await fetch(`${(import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000'}/api/v1/auth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      grant_type: 'authorization_code',
-      code,
-      client_id: oauthConfig.clientId,
-      redirect_uri: oauthConfig.redirectUri,
-    }),
-  });
+  const response = await fetch(
+    `${(import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000'}/api/v1/auth/token`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code,
+        client_id: oauthConfig.clientId,
+        redirect_uri: oauthConfig.redirectUri,
+      }),
+    }
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.detail || errorData.message || 'Token exchange failed'
-    );
+    throw new Error(errorData.detail || errorData.message || 'Token exchange failed');
   }
 
   return response.json();

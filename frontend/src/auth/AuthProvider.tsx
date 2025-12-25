@@ -1,11 +1,12 @@
 /**
  * Auth Context & Provider
- * 
+ *
  * Manages authentication state, user profile, and role-based access control.
  */
+/* eslint-disable react-refresh/only-export-components */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { setTokens, clearTokens, getAccessToken } from './tokens';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { clearTokens, getAccessToken, setTokens } from './tokens';
 
 export interface User {
   id: string;
@@ -31,6 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000';
+
+  const normalizeUser = (raw: User): User => ({
+    ...raw,
+    roles: (raw.roles ?? []).map((r) => r.toUpperCase()),
+  });
 
   // Initialize auth on mount
   useEffect(() => {
@@ -38,13 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = getAccessToken();
       if (token) {
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/auth/me`, {
+          const response = await fetch(`${apiBaseUrl}/api/v1/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
           if (response.ok) {
             const userData = await response.json();
-            setUser(userData);
+            setUser(normalizeUser(userData));
           } else if (response.status === 401) {
             clearTokens();
             setUser(null);
@@ -58,13 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initAuth();
-  }, []);
+  }, [apiBaseUrl]);
 
   const login = async (accessToken: string, refreshToken: string) => {
     try {
       setTokens(accessToken, refreshToken);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/auth/me`, {
+      const response = await fetch(`${apiBaseUrl}/api/v1/auth/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
@@ -73,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userData = await response.json();
-      setUser(userData);
+      setUser(normalizeUser(userData));
       setError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';

@@ -6,13 +6,12 @@ Keeps controllers thin and centralizes domain decisions.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from ..models.user import User
-from ..repositories import AuditContext, AuditRepository, UserRepository
+from ..repositories import AuditContext, UserRepository
 
 
 @dataclass(frozen=True)

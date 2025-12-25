@@ -1,12 +1,12 @@
 /**
  * Leave History Page
- * 
+ *
  * Displays user's leave request history with:
  * - Filtering by status
  * - Detailed view modal
  * - Withdraw action for pending requests
  * - Pagination
- * 
+ *
  * Enhanced with:
  * - Consistent formatting utilities
  * - Skeleton loaders for better perceived performance
@@ -14,52 +14,47 @@
  * - Query optimization with staleTime
  */
 
-import { useState, memo, useCallback } from 'react';
-import { useLeaveRequests } from '@/features/leave/hooks/useLeaveRequests';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveAPI } from '@/api/endpoints/leave.api';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { TableSkeleton } from '@/components/common/SkeletonLoaders';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { SuccessAlert } from '@/components/common/SuccessAlert';
-import { Modal } from '@/components/common/Modal';
-import { formatDate } from '@/utils/formatters';
-import { getLeaveStatusClass } from '@/utils/statusBadges';
-import { buttonPrimary, buttonSecondary, buttonDestructive, buttonText } from '@/utils/buttonStyles';
 import type { LeaveRequest } from '@/api/types/generated';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { Modal } from '@/components/common/Modal';
+import { TableSkeleton } from '@/components/common/SkeletonLoaders';
+import { SuccessAlert } from '@/components/common/SuccessAlert';
+import { useLeaveRequests } from '@/features/leave/hooks/useLeaveRequests';
+import { buttonDestructive, buttonSecondary, buttonText } from '@/utils/buttonStyles';
+import { formatDate } from '@/utils/formatters';
+import { getLeaveStatusClass as getStatusBadgeClass } from '@/utils/statusBadges';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { memo, useCallback, useState } from 'react';
 
 // Memoized filter component to prevent unnecessary re-renders
-const StatusFilter = memo(({ 
-  value, 
-  onChange 
-}: { 
-  value: string; 
-  onChange: (value: string) => void;
-}) => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-    <div className="flex items-center gap-4">
-      <label 
-        htmlFor="status-filter"
-        className="text-sm font-medium text-gray-700 dark:text-gray-300"
-      >
-        Filter by Status:
-      </label>
-      <select
-        id="status-filter"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-        aria-label="Filter leave requests by status"
-      >
-        <option value="all">All</option>
-        <option value="PENDING">Pending</option>
-        <option value="APPROVED">Approved</option>
-        <option value="REJECTED">Rejected</option>
-        <option value="WITHDRAWN">Withdrawn</option>
-      </select>
+const StatusFilter = memo(
+  ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+      <div className="flex items-center gap-4">
+        <label
+          htmlFor="status-filter"
+          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Filter by Status:
+        </label>
+        <select
+          id="status-filter"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+          aria-label="Filter leave requests by status"
+        >
+          <option value="all">All</option>
+          <option value="PENDING">Pending</option>
+          <option value="APPROVED">Approved</option>
+          <option value="REJECTED">Rejected</option>
+          <option value="WITHDRAWN">Withdrawn</option>
+        </select>
+      </div>
     </div>
-  </div>
-));
+  )
+);
 
 StatusFilter.displayName = 'StatusFilter';
 
@@ -71,7 +66,11 @@ export function LeaveHistoryPage() {
 
   const queryClient = useQueryClient();
 
-  const { data: requests, isLoading, error } = useLeaveRequests({
+  const {
+    data: requests,
+    isLoading,
+    error,
+  } = useLeaveRequests({
     status: statusFilter === 'all' ? undefined : statusFilter,
   });
 
@@ -91,80 +90,31 @@ export function LeaveHistoryPage() {
     },
   });
 
-  const handleWithdraw = useCallback((request: LeaveRequest) => {
-    if (window.confirm('Are you sure you want to withdraw this leave request?')) {
-      withdrawMutation.mutate(request.id);
-    }
-  }, [withdrawMutation]);
+  const handleWithdraw = useCallback(
+    (request: LeaveRequest) => {
+      if (window.confirm('Are you sure you want to withdraw this leave request?')) {
+        withdrawMutation.mutate(request.id);
+      }
+    },
+    [withdrawMutation]
+  );
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'WITHDRAWN':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'WITHDRAWN':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
-  };
+  // Use imported formatDate and getStatusBadgeClass from utilities
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Leave History
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            View and manage your leave requests
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Leave History</h1>
+          <p className="text-gray-600 dark:text-gray-400">View and manage your leave requests</p>
         </div>
 
         {/* Alerts */}
         {successMessage && (
           <SuccessAlert message={successMessage} onClose={() => setSuccessMessage('')} />
         )}
-        {errorMessage && (
-          <ErrorAlert message={errorMessage} onClose={() => setErrorMessage('')} />
-        )}
+        {errorMessage && <ErrorAlert message={errorMessage} onClose={() => setErrorMessage('')} />}
 
         {/* Filters */}
         <StatusFilter value={statusFilter} onChange={setStatusFilter} />
@@ -175,9 +125,9 @@ export function LeaveHistoryPage() {
             <TableSkeleton rows={5} columns={6} />
           ) : error ? (
             <div className="p-6">
-              <ErrorAlert 
-                message="Failed to load leave history. Please try again." 
-                onClose={() => {}} 
+              <ErrorAlert
+                message="Failed to load leave history. Please try again."
+                onClose={() => {}}
               />
             </div>
           ) : (
@@ -275,7 +225,7 @@ export function LeaveHistoryPage() {
                           <p className="text-sm mt-1">
                             {statusFilter !== 'all'
                               ? `No ${statusFilter.toLowerCase()} requests`
-                              : 'You haven\'t submitted any leave requests yet'}
+                              : "You haven't submitted any leave requests yet"}
                           </p>
                         </div>
                       </td>

@@ -1,9 +1,9 @@
 /**
  * Build Version Utilities
- * 
+ *
  * Provides access to build-time metadata for release traceability.
  * These values are injected at build time and are immutable.
- * 
+ *
  * @module utils/version
  */
 
@@ -70,11 +70,11 @@ export function getBuildInfo(): BuildInfo {
 export function getVersionString(): string {
   const { version, commit, mode } = getBuildInfo();
   const shortCommit = commit.substring(0, 7);
-  
+
   if (mode === 'production') {
     return `v${version}`;
   }
-  
+
   return `v${version} (${shortCommit})`;
 }
 
@@ -97,10 +97,7 @@ export function getDetailedVersionInfo(): string {
  */
 export function logBuildInfo(): void {
   const info = getBuildInfo();
-  console.info(
-    '%c🏗️ LMS Frontend Build Info',
-    'font-weight: bold; font-size: 14px;'
-  );
+  console.info('%c🏗️ LMS Frontend Build Info', 'font-weight: bold; font-size: 14px;');
   console.table({
     Version: info.version,
     Commit: info.commit,

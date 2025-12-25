@@ -4,10 +4,10 @@
  * Form for employees to request leave with validation and balance checking.
  */
 
-import { useForm, Controller } from 'react-hook-form';
 import { useCreateLeaveRequest, useLeaveBalance } from '@/features/leave/hooks/useLeaveRequests';
 import { differenceInDays } from 'date-fns';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 
 interface LeaveFormData {
   leave_type: string;
@@ -42,7 +42,7 @@ export function LeaveForm({ onSuccess }: LeaveFormProps) {
 
   const startDate = watch('start_date');
   const endDate = watch('end_date');
-  const leaveType = watch('leave_type');
+  const reasonText = watch('reason');
 
   // Calculate days requested
   const daysRequested =
@@ -160,9 +160,7 @@ export function LeaveForm({ onSuccess }: LeaveFormProps) {
               <p className="text-xs text-gray-600 dark:text-gray-400">Available</p>
               <p
                 className={`text-lg font-bold ${
-                  insufficientBalance
-                    ? 'text-error'
-                    : 'text-success'
+                  insufficientBalance ? 'text-error' : 'text-success'
                 }`}
               >
                 {isBalanceLoading ? '...' : availableDays}
@@ -197,11 +195,9 @@ export function LeaveForm({ onSuccess }: LeaveFormProps) {
             />
           )}
         />
-        {errors.reason && (
-          <p className="text-error text-sm mt-1">✗ {errors.reason.message}</p>
-        )}
+        {errors.reason && <p className="text-error text-sm mt-1">✗ {errors.reason.message}</p>}
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {field.value?.length || 0} / 1000 characters
+          {reasonText?.length || 0} / 1000 characters
         </p>
       </div>
 

@@ -1,6 +1,6 @@
 /**
  * Leave API Endpoints
- * 
+ *
  * All API calls go through this layer for type safety and consistency.
  */
 

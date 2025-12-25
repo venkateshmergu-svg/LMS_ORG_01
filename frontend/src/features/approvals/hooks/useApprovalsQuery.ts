@@ -1,16 +1,17 @@
 /**
  * Approval Request Hooks
  *
- * React Query hooks for manager approval operations
+ * React Query hooks for manager approval operations.
+ * Uses step-based workflow from backend.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { approvalsAPI } from '@/api/endpoints/approvals.api';
 import { mapAPIError } from '@/api/errors';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const QUERY_KEYS = {
   approvalsPending: ['approvals', 'pending'] as const,
-  approvalsAll: ['approvals', 'all'] as const,
+  approvalDetail: (stepId: string) => ['approvals', 'detail', stepId] as const,
 };
 
 /**
@@ -24,14 +25,25 @@ export function useApprovalsQuery(params?: { skip?: number; limit?: number }) {
 }
 
 /**
- * Approve a leave request mutation
+ * Fetch specific approval step details
+ */
+export function useApprovalDetail(stepId: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.approvalDetail(stepId),
+    queryFn: () => approvalsAPI.getApproval(stepId),
+    enabled: !!stepId,
+  });
+}
+
+/**
+ * Approve a workflow step
  */
 export function useApproveRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, comments }: { id: string; comments?: string }) =>
-      approvalsAPI.approve(id, { status: 'APPROVED', comments }),
+    mutationFn: ({ stepId, comment }: { stepId: string; comment?: string }) =>
+      approvalsAPI.approve(stepId, { comment }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.approvalsPending });
       queryClient.invalidateQueries({ queryKey: ['leave', 'requests'] });
@@ -44,14 +56,14 @@ export function useApproveRequest() {
 }
 
 /**
- * Reject a leave request mutation
+ * Reject a workflow step
  */
 export function useRejectRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, comments }: { id: string; comments: string }) =>
-      approvalsAPI.reject(id, { status: 'REJECTED', comments }),
+    mutationFn: ({ stepId, comment }: { stepId: string; comment: string }) =>
+      approvalsAPI.reject(stepId, { comment }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.approvalsPending });
       queryClient.invalidateQueries({ queryKey: ['leave', 'requests'] });

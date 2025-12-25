@@ -3,18 +3,50 @@
  *
  * Displays leave balance breakdown with visual progress bars.
  * Shows available, used, and pending days.
+ *
+ * Performance optimizations:
+ * - Memoized to prevent unnecessary re-renders
+ * - useMemo for computed percentage values
+ * - useCallback for event handlers
  */
 
 import { useLeaveBalance } from '@/features/leave/hooks/useLeaveRequests';
 import { RefreshCw } from 'lucide-react';
+import { memo, useCallback, useMemo } from 'react';
 
 interface BalanceCardProps {
   variant?: 'compact' | 'full';
   onRefresh?: () => void;
 }
 
-export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
+export const BalanceCard = memo(function BalanceCard({
+  variant = 'full',
+  onRefresh,
+}: BalanceCardProps) {
   const { data: balance, isLoading, refetch, isFetching } = useLeaveBalance();
+
+  // Memoize refresh handler
+  const handleRefresh = useCallback(() => {
+    refetch();
+    onRefresh?.();
+  }, [refetch, onRefresh]);
+
+  // Memoize percentage calculations
+  const percentages = useMemo(() => {
+    if (!balance) return { used: 0, pending: 0, available: 100 };
+
+    const total = balance.available + balance.used + balance.pending;
+    const usedPercent = total > 0 ? (balance.used / total) * 100 : 0;
+    const pendingPercent = total > 0 ? (balance.pending / total) * 100 : 0;
+    const availablePercent = 100 - usedPercent - pendingPercent;
+
+    return {
+      used: usedPercent,
+      pending: pendingPercent,
+      available: availablePercent,
+      total,
+    };
+  }, [balance]);
 
   if (isLoading) {
     return (
@@ -37,21 +69,13 @@ export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
     );
   }
 
-  const total = balance.available + balance.used + balance.pending;
-  const usedPercent = total > 0 ? (balance.used / total) * 100 : 0;
-  const pendingPercent = total > 0 ? (balance.pending / total) * 100 : 0;
-  const availablePercent = 100 - usedPercent - pendingPercent;
-
   if (variant === 'compact') {
     return (
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm">Leave Balance</h3>
           <button
-            onClick={() => {
-              refetch();
-              onRefresh?.();
-            }}
+            onClick={handleRefresh}
             disabled={isFetching}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition"
           >
@@ -67,7 +91,7 @@ export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className="bg-success h-2 rounded-full transition-all"
-              style={{ width: `${availablePercent}%` }}
+              style={{ width: `${percentages.available}%` }}
             />
           </div>
         </div>
@@ -93,17 +117,10 @@ export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
         <div>
           <h3 className="text-xl font-bold">Leave Balance</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {total} days total annual leave
+            {percentages.total} days total annual leave
           </p>
         </div>
-        <button
-          onClick={() => {
-            refetch();
-            onRefresh?.();
-          }}
-          disabled={isFetching}
-          className="btn btn-sm btn-secondary"
-        >
+        <button onClick={handleRefresh} disabled={isFetching} className="btn btn-sm btn-secondary">
           <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           {isFetching ? 'Updating...' : 'Refresh'}
         </button>
@@ -115,10 +132,10 @@ export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
           {/* Available */}
           <div
             className="bg-success flex items-center justify-center transition-all"
-            style={{ width: `${availablePercent}%` }}
+            style={{ width: `${percentages.available}%` }}
             title={`Available: ${balance.available}`}
           >
-            {availablePercent > 15 && (
+            {percentages.available > 15 && (
               <span className="text-white text-xs font-semibold">{balance.available}</span>
             )}
           </div>
@@ -126,10 +143,10 @@ export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
           {/* Pending */}
           <div
             className="bg-warning flex items-center justify-center transition-all"
-            style={{ width: `${pendingPercent}%` }}
+            style={{ width: `${percentages.pending}%` }}
             title={`Pending: ${balance.pending}`}
           >
-            {pendingPercent > 15 && (
+            {percentages.pending > 15 && (
               <span className="text-white text-xs font-semibold">{balance.pending}</span>
             )}
           </div>
@@ -137,10 +154,10 @@ export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
           {/* Used */}
           <div
             className="bg-error flex items-center justify-center transition-all"
-            style={{ width: `${usedPercent}%` }}
+            style={{ width: `${percentages.used}%` }}
             title={`Used: ${balance.used}`}
           >
-            {usedPercent > 15 && (
+            {percentages.used > 15 && (
               <span className="text-white text-xs font-semibold">{balance.used}</span>
             )}
           </div>
@@ -200,4 +217,4 @@ export function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
       </div>
     </div>
   );
-}
+});

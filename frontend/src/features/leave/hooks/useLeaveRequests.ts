@@ -1,6 +1,6 @@
 /**
  * Leave Request Hooks
- * 
+ *
  * Custom React Query hooks for leave management
  */
 

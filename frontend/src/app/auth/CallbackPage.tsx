@@ -5,15 +5,16 @@
  * and logs user in.
  */
 
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { exchangeCodeForTokens } from '@/lib/oauth';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export function CallbackPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -41,6 +42,7 @@ export function CallbackPage() {
         await login(tokenData.access_token, tokenData.refresh_token);
 
         // Redirect to dashboard
+        setIsLoading(false);
         navigate('/dashboard', { replace: true });
       } catch (err) {
         const friendlyError = err instanceof Error ? err.message : 'Authentication failed';
@@ -81,6 +83,7 @@ export function CallbackPage() {
   }
 
   // Loading state
+  if (!isLoading) return null;
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="text-center">
@@ -88,7 +91,9 @@ export function CallbackPage() {
           <div className="w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full"></div>
         </div>
         <p className="text-gray-600 dark:text-gray-300 font-medium">Completing sign in...</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Please wait while we verify your credentials.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          Please wait while we verify your credentials.
+        </p>
       </div>
     </div>
   );

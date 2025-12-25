@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -203,6 +204,9 @@ class LeaveBalance(BaseModel):
     
     __table_args__ = (
         UniqueConstraint('user_id', 'leave_type_id', 'period_start', name='uq_user_leave_type_period'),
+        # Performance indexes for common query patterns
+        Index('ix_balance_user_type_period', 'user_id', 'leave_type_id', 'period_start', 'period_end'),
+        Index('ix_balance_user_period', 'user_id', 'period_start', 'period_end'),
     )
     
     @property

@@ -2,6 +2,10 @@
 
 Transforms approved leave requests into calendar-friendly event objects.
 No write-back; intended for external consumption.
+
+Performance optimizations:
+- Uses eager-loaded relationships from repository (no N+1 queries)
+- Batch processes events efficiently
 """
 
 from __future__ import annotations
@@ -22,15 +26,26 @@ class CalendarIntegrationService:
         self.user_repo = UserRepository(session, audit_repo=self.audit_repo)
 
     def generate_events(self, start_date: date, end_date: date) -> list[dict[str, Any]]:
+        """Generate calendar events for approved leave requests.
+        
+        Performance: Uses eager-loaded user and leave_type relationships 
+        to avoid N+1 queries.
+        """
         approved = self.request_repo.list_approved_between(start_date, end_date)
         events: list[dict[str, Any]] = []
+        
         for req in approved:
-            from uuid import UUID
-
-            user_id = (
-                req.user_id if isinstance(req.user_id, UUID) else UUID(str(req.user_id))
-            )
-            user = self.user_repo.get_required(user_id)
+            # Use eager-loaded relationship instead of separate query
+            # The user is already loaded via selectinload in the repository
+            user = req.user
+            if user is None:
+                # Fallback only if relationship wasn't loaded (shouldn't happen)
+                from uuid import UUID
+                user_id = (
+                    req.user_id if isinstance(req.user_id, UUID) else UUID(str(req.user_id))
+                )
+                user = self.user_repo.get_required(user_id)
+            
             events.append(
                 {
                     "title": f"{user.full_name} on {req.leave_type.code if req.leave_type else 'Leave'}",

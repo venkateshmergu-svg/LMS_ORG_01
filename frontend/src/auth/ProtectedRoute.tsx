@@ -1,6 +1,6 @@
 /**
  * Protected Route Wrapper
- * 
+ *
  * Ensures user is authenticated and has required roles before rendering content.
  */
 

@@ -1,12 +1,12 @@
 /**
  * Reports Page (HR Admin Only)
- * 
+ *
  * Provides read-only reports and integration sync triggers
  * - Leave utilization reports
  * - Department statistics
  * - HRIS sync status and trigger
  * - Payroll sync status and trigger
- * 
+ *
  * Enhanced with:
  * - Skeleton loaders for better perceived performance
  * - Consistent button styling
@@ -44,7 +44,7 @@ export function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState<'utilization' | 'department'>('utilization');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  
+
   const queryClient = useQueryClient();
 
   // Fetch utilization report
@@ -136,15 +136,11 @@ export function ReportsPage() {
         {successMessage && (
           <SuccessAlert message={successMessage} onClose={() => setSuccessMessage('')} />
         )}
-        {errorMessage && (
-          <ErrorAlert message={errorMessage} onClose={() => setErrorMessage('')} />
-        )}
+        {errorMessage && <ErrorAlert message={errorMessage} onClose={() => setErrorMessage('')} />}
 
         {/* Reports Section */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Leave Reports
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Leave Reports</h2>
 
           {/* Report Tabs */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-4">
@@ -251,8 +247,7 @@ export function ReportsPage() {
                               Department
                             </th>
                             <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
-                              Employees
-                     TableSkeleton rows={5} columns={5} /     Total Leave Taken
+                              Employees TableSkeleton rows={5} columns={5} / Total Leave Taken
                             </th>
                             <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
                               Avg per Employee

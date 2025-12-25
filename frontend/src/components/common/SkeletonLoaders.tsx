@@ -1,6 +1,6 @@
 /**
  * Skeleton Loaders
- * 
+ *
  * Consistent skeleton loading states for better perceived performance
  */
 
@@ -16,7 +16,7 @@ export function TableSkeleton({ rows = 5, columns = 6 }: { rows?: number; column
           <div key={idx} className="h-4 bg-gray-200 dark:bg-gray-600 rounded flex-1" />
         ))}
       </div>
-      
+
       {/* Rows */}
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {Array.from({ length: rows }).map((_, rowIdx) => (

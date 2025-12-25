@@ -1,6 +1,6 @@
 /**
  * Date and Time Formatting Utilities
- * 
+ *
  * Consistent date/time formatting across the application
  */
 
@@ -54,6 +54,6 @@ export function formatRelativeTime(dateStr: string): string {
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
-  
+
   return formatDate(dateStr);
 }

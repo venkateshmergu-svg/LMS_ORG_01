@@ -1,0 +1,17 @@
+{
+  "balance": {
+    "employee_id": "DEV_EVE_EMPLOYEE",
+    "leave_type": "TOTAL",
+    "total_balance": 20.0,
+    "used": 0.0,
+    "pending": 0.0,
+    "available": 20.0
+  },
+  "my_requests": {
+    "items": [],
+    "total": 0,
+    "skip": 0,
+    "limit": 50
+  },
+  "created": null
+}

@@ -1,6 +1,6 @@
 /**
  * Role-Based Component Gating
- * 
+ *
  * Conditionally renders children based on user roles.
  * Example: <RoleGate requiredRoles={['MANAGER']}>Approve Button</RoleGate>
  */

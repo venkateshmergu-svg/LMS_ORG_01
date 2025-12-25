@@ -1,9 +1,9 @@
 /**
  * Generated API Types
- * 
+ *
  * TODO: Generate these from backend OpenAPI spec using:
  * npx openapi-typescript http://localhost:8000/openapi.json -o src/api/types/generated.ts
- * 
+ *
  * For now, these are manual type definitions matching the backend API.
  */
 
@@ -17,7 +17,7 @@ export interface PaginatedResponse<T> {
 
 export interface ApiError {
   detail: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Auth types
@@ -35,6 +35,9 @@ export interface AuthTokens {
 }
 
 // Leave types
+// Status values: DRAFT, PENDING (pending_approval), APPROVED, REJECTED, WITHDRAWN (cancelled)
+export type LeaveRequestStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+
 export interface LeaveRequest {
   id: string;
   user_id: string;
@@ -43,7 +46,7 @@ export interface LeaveRequest {
   end_date: string;
   days_requested: number;
   reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+  status: LeaveRequestStatus;
   created_at: string;
   updated_at: string;
 }
@@ -73,12 +76,24 @@ export interface LeavePolicy {
 }
 
 // Approval types
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 export interface ApprovalRequest {
   id: string;
+  step_id: string;
   leave_request_id: string;
   approver_id: string;
   approver_name: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  // Employee info (from leave request)
+  employee_id: string;
+  employee_name: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  days_requested: number;
+  reason?: string;
+  // Approval workflow info
+  status: ApprovalStatus;
   sequence: number;
   comments?: string;
   created_at: string;
@@ -86,8 +101,7 @@ export interface ApprovalRequest {
 }
 
 export interface ApprovalAction {
-  status: 'APPROVED' | 'REJECTED';
-  comments?: string;
+  comment?: string;
 }
 
 // Workflow types
@@ -106,8 +120,8 @@ export interface AuditLog {
   entity_type: string;
   entity_id: string;
   action: string;
-  old_values?: Record<string, any>;
-  new_values?: Record<string, any>;
+  old_values?: Record<string, unknown>;
+  new_values?: Record<string, unknown>;
   performed_by: string;
   timestamp: string;
   ip_address?: string;
