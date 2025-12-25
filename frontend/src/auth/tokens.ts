@@ -1,6 +1,6 @@
 /**
  * Token Storage Abstraction
- * 
+ *
  * Stores JWT tokens in memory (secure against XSS, but lost on refresh).
  * For production, consider httpOnly cookies issued by the backend.
  */
@@ -32,11 +32,14 @@ export async function refreshAccessToken(): Promise<string> {
   }
 
   try {
-    const response = await fetch(`${(import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000'}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
+    const response = await fetch(
+      `${(import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000'}/api/v1/auth/refresh`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error('Token refresh failed');

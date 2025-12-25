@@ -43,13 +43,17 @@ export function LoginPage() {
           Sign in with your organization account to manage your leave.
         </p>
 
-        <button onClick={handleOAuthLogin} className="w-full btn btn-primary text-lg py-3 font-medium">
+        <button
+          onClick={handleOAuthLogin}
+          className="w-full btn btn-primary text-lg py-3 font-medium"
+        >
           🔐 Sign in with OAuth2
         </button>
 
         <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            You will be redirected to your organization's identity provider to securely authenticate.
+            You will be redirected to your organization's identity provider to securely
+            authenticate.
           </p>
         </div>
       </div>

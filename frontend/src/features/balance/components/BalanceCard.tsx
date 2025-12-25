@@ -3,7 +3,7 @@
  *
  * Displays leave balance breakdown with visual progress bars.
  * Shows available, used, and pending days.
- * 
+ *
  * Performance optimizations:
  * - Memoized to prevent unnecessary re-renders
  * - useMemo for computed percentage values
@@ -19,7 +19,10 @@ interface BalanceCardProps {
   onRefresh?: () => void;
 }
 
-export const BalanceCard = memo(function BalanceCard({ variant = 'full', onRefresh }: BalanceCardProps) {
+export const BalanceCard = memo(function BalanceCard({
+  variant = 'full',
+  onRefresh,
+}: BalanceCardProps) {
   const { data: balance, isLoading, refetch, isFetching } = useLeaveBalance();
 
   // Memoize refresh handler
@@ -31,17 +34,17 @@ export const BalanceCard = memo(function BalanceCard({ variant = 'full', onRefre
   // Memoize percentage calculations
   const percentages = useMemo(() => {
     if (!balance) return { used: 0, pending: 0, available: 100 };
-    
+
     const total = balance.available + balance.used + balance.pending;
     const usedPercent = total > 0 ? (balance.used / total) * 100 : 0;
     const pendingPercent = total > 0 ? (balance.pending / total) * 100 : 0;
     const availablePercent = 100 - usedPercent - pendingPercent;
-    
-    return { 
-      used: usedPercent, 
-      pending: pendingPercent, 
+
+    return {
+      used: usedPercent,
+      pending: pendingPercent,
       available: availablePercent,
-      total 
+      total,
     };
   }, [balance]);
 
@@ -117,11 +120,7 @@ export const BalanceCard = memo(function BalanceCard({ variant = 'full', onRefre
             {percentages.total} days total annual leave
           </p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={isFetching}
-          className="btn btn-sm btn-secondary"
-        >
+        <button onClick={handleRefresh} disabled={isFetching} className="btn btn-sm btn-secondary">
           <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           {isFetching ? 'Updating...' : 'Refresh'}
         </button>

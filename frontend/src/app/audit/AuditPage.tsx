@@ -1,12 +1,12 @@
 /**
  * Audit Log Page
- * 
+ *
  * Read-only audit log viewer with:
  * - Filtering by entity type and action
  * - Search by entity ID or user
  * - Pagination
  * - Detailed view modal
- * 
+ *
  * Enhanced with:
  * - Skeleton loaders for better perceived performance
  * - Improved filter accessibility
@@ -24,91 +24,93 @@ import { useQuery } from '@tanstack/react-query';
 import { memo, useCallback, useState } from 'react';
 
 // Memoized filters to prevent unnecessary re-renders
-const AuditFilters = memo(({
-  entityTypeFilter,
-  actionFilter,
-  searchQuery,
-  onEntityTypeChange,
-  onActionChange,
-  onSearchChange,
-}: {
-  entityTypeFilter: string;
-  actionFilter: string;
-  searchQuery: string;
-  onEntityTypeChange: (value: string) => void;
-  onActionChange: (value: string) => void;
-  onSearchChange: (value: string) => void;
-}) => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Search */}
-      <div>
-        <label 
-          htmlFor="audit-search"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          Search
-        </label>
-        <input
-          id="audit-search"
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Entity ID or user email..."
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-          aria-label="Search audit logs"
-        />
-      </div>
+const AuditFilters = memo(
+  ({
+    entityTypeFilter,
+    actionFilter,
+    searchQuery,
+    onEntityTypeChange,
+    onActionChange,
+    onSearchChange,
+  }: {
+    entityTypeFilter: string;
+    actionFilter: string;
+    searchQuery: string;
+    onEntityTypeChange: (value: string) => void;
+    onActionChange: (value: string) => void;
+    onSearchChange: (value: string) => void;
+  }) => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Search */}
+        <div>
+          <label
+            htmlFor="audit-search"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Search
+          </label>
+          <input
+            id="audit-search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Entity ID or user email..."
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+            aria-label="Search audit logs"
+          />
+        </div>
 
-      {/* Entity Type Filter */}
-      <div>
-        <label 
-          htmlFor="entity-type-filter"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          Entity Type
-        </label>
-        <select
-          id="entity-type-filter"
-          value={entityTypeFilter}
-          onChange={(e) => onEntityTypeChange(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-          aria-label="Filter by entity type"
-        >
-          <option value="all">All Types</option>
-          <option value="leave_request">Leave Request</option>
-          <option value="approval">Approval</option>
-          <option value="user">User</option>
-          <option value="policy">Policy</option>
-        </select>
-      </div>
+        {/* Entity Type Filter */}
+        <div>
+          <label
+            htmlFor="entity-type-filter"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Entity Type
+          </label>
+          <select
+            id="entity-type-filter"
+            value={entityTypeFilter}
+            onChange={(e) => onEntityTypeChange(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+            aria-label="Filter by entity type"
+          >
+            <option value="all">All Types</option>
+            <option value="leave_request">Leave Request</option>
+            <option value="approval">Approval</option>
+            <option value="user">User</option>
+            <option value="policy">Policy</option>
+          </select>
+        </div>
 
-      {/* Action Filter */}
-      <div>
-        <label 
-          htmlFor="action-filter"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          Action
-        </label>
-        <select
-          id="action-filter"
-          value={actionFilter}
-          onChange={(e) => onActionChange(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-          aria-label="Filter by action type"
-        >
-          <option value="all">All Actions</option>
-          <option value="create">Create</option>
-          <option value="update">Update</option>
-          <option value="delete">Delete</option>
-          <option value="approve">Approve</option>
-          <option value="reject">Reject</option>
-        </select>
+        {/* Action Filter */}
+        <div>
+          <label
+            htmlFor="action-filter"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Action
+          </label>
+          <select
+            id="action-filter"
+            value={actionFilter}
+            onChange={(e) => onActionChange(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+            aria-label="Filter by action type"
+          >
+            <option value="all">All Actions</option>
+            <option value="create">Create</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+            <option value="approve">Approve</option>
+            <option value="reject">Reject</option>
+          </select>
+        </div>
       </div>
     </div>
-  </div>
-));
+  )
+);
 
 AuditFilters.displayName = 'AuditFilters';
 
@@ -123,7 +125,7 @@ export function AuditPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['audit-logs', entityTypeFilter, actionFilter, searchQuery, page],
     queryFn: async () => {
-      const params: any = {
+      const params: Record<string, string | number> = {
         skip: page * pageSize,
         limit: pageSize,
       };
@@ -198,12 +200,8 @@ export function AuditPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Audit Logs
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            View all system activity and changes
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Audit Logs</h1>
+          <p className="text-gray-600 dark:text-gray-400">View all system activity and changes</p>
         </div>
 
         {/* Filters */}
@@ -323,8 +321,8 @@ export function AuditPage() {
               {data && data.total > 0 && (
                 <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing {page * pageSize + 1} to{' '}
-                    {Math.min((page + 1) * pageSize, data.total)} of {data.total} entries
+                    Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, data.total)}{' '}
+                    of {data.total} entries
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -387,9 +385,7 @@ export function AuditPage() {
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     Entity Type
                   </label>
-                  <p className="mt-1 text-gray-900 dark:text-white">
-                    {selectedLog.entity_type}
-                  </p>
+                  <p className="mt-1 text-gray-900 dark:text-white">{selectedLog.entity_type}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -406,9 +402,7 @@ export function AuditPage() {
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     Performed By
                   </label>
-                  <p className="mt-1 text-gray-900 dark:text-white">
-                    {selectedLog.performed_by}
-                  </p>
+                  <p className="mt-1 text-gray-900 dark:text-white">{selectedLog.performed_by}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">

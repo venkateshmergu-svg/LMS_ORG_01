@@ -1,6 +1,6 @@
 /**
  * API Error Mapping
- * 
+ *
  * Converts HTTP errors to user-friendly messages for UI consumption.
  */
 
@@ -16,16 +16,16 @@ export interface APIError {
 export function mapAPIError(error: unknown): APIError {
   if (error instanceof AxiosError) {
     const status = error.response?.status;
-    const data = error.response?.data as any;
-    const detail = data?.detail || data?.message;
+    const data = error.response?.data as Record<string, unknown>;
+    const detail = (data?.detail as string) || (data?.message as string);
 
     switch (status) {
       case 400:
         return {
           code: 'VALIDATION_ERROR',
           message: detail || 'Please check your input and try again.',
-          field: data?.field,
-          details: data?.errors,
+          field: data?.field as string | undefined,
+          details: data?.errors as Record<string, string> | undefined,
         };
 
       case 401:
@@ -56,7 +56,7 @@ export function mapAPIError(error: unknown): APIError {
         return {
           code: 'VALIDATION_ERROR',
           message: 'Validation failed.',
-          details: data?.errors,
+          details: data?.errors as Record<string, string> | undefined,
         };
 
       case 500:

@@ -1,6 +1,6 @@
-import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { defineConfig, loadEnv } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -13,8 +13,8 @@ export default defineConfig(({ mode }) => {
   const buildDate = process.env.VITE_BUILD_DATE || env.VITE_BUILD_DATE || new Date().toISOString()
   const buildNumber = process.env.VITE_BUILD_NUMBER || env.VITE_BUILD_NUMBER || '0'
   
-  // Check if we're doing bundle analysis
-  const isAnalyze = mode === 'analyze'
+  // Check if we're doing bundle analysis (prefixed with _ to indicate intentionally unused)
+  const _isAnalyze = mode === 'analyze'
 
   return {
     plugins: [react()],

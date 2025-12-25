@@ -101,7 +101,9 @@ export function ApprovalQueue({ pageSize = 10 }: ApprovalQueueProps) {
                     placeholder="Rejection comment (required for reject)"
                     className="input input-sm w-full max-w-xs"
                     value={rejectComment[approval.step_id] || ''}
-                    onChange={(e) => setRejectComment({ ...rejectComment, [approval.step_id]: e.target.value })}
+                    onChange={(e) =>
+                      setRejectComment({ ...rejectComment, [approval.step_id]: e.target.value })
+                    }
                   />
                 </div>
               </div>

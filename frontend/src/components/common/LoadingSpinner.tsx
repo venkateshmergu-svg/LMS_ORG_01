@@ -1,6 +1,6 @@
 /**
  * LoadingSpinner Component
- * 
+ *
  * Displays animated spinner for loading states
  */
 

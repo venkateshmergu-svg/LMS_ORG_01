@@ -1,9 +1,9 @@
 /**
  * Version Display Component
- * 
+ *
  * Displays build version information in the UI.
  * Used in footer and admin pages for release traceability.
- * 
+ *
  * @module components/common/VersionDisplay
  */
 
@@ -80,12 +80,8 @@ export function VersionDisplay({
           </span>
         )}
       </div>
-      <div className="mt-1 text-xs text-gray-500 font-mono">
-        Commit: {info.commit}
-      </div>
-      <div className="text-xs text-gray-500">
-        Built: {info.formattedDate}
-      </div>
+      <div className="mt-1 text-xs text-gray-500 font-mono">Commit: {info.commit}</div>
+      <div className="text-xs text-gray-500">Built: {info.formattedDate}</div>
     </div>
   );
 }
@@ -102,19 +98,19 @@ export function VersionInfoPanel({ className = '' }: { className?: string }) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <dt className="text-gray-500">Version</dt>
         <dd className="font-mono text-gray-900">{info.version}</dd>
-        
+
         <dt className="text-gray-500">Commit</dt>
         <dd className="font-mono text-gray-900">{info.commit}</dd>
-        
+
         <dt className="text-gray-500">Build Number</dt>
         <dd className="font-mono text-gray-900">#{info.buildNumber}</dd>
-        
+
         <dt className="text-gray-500">Build Date</dt>
         <dd className="text-gray-900">{info.formattedDate}</dd>
-        
+
         <dt className="text-gray-500">Environment</dt>
         <dd className="text-gray-900 capitalize">{info.mode}</dd>
-        
+
         <dt className="text-gray-500">Full Version</dt>
         <dd className="font-mono text-gray-900 text-xs">{info.fullVersion}</dd>
       </dl>

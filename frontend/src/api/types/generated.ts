@@ -1,9 +1,9 @@
 /**
  * Generated API Types
- * 
+ *
  * TODO: Generate these from backend OpenAPI spec using:
  * npx openapi-typescript http://localhost:8000/openapi.json -o src/api/types/generated.ts
- * 
+ *
  * For now, these are manual type definitions matching the backend API.
  */
 
@@ -17,7 +17,7 @@ export interface PaginatedResponse<T> {
 
 export interface ApiError {
   detail: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Auth types
@@ -120,8 +120,8 @@ export interface AuditLog {
   entity_type: string;
   entity_id: string;
   action: string;
-  old_values?: Record<string, any>;
-  new_values?: Record<string, any>;
+  old_values?: Record<string, unknown>;
+  new_values?: Record<string, unknown>;
   performed_by: string;
   timestamp: string;
   ip_address?: string;

@@ -1,9 +1,9 @@
 /**
  * Main App Component
- * 
+ *
  * Sets up providers (Auth, ReactQuery, Router) and defines routes
  * Enhanced with lazy loading for better performance
- * 
+ *
  * Performance optimizations:
  * - Critical paths (login, dashboard) are eagerly loaded
  * - Non-critical pages use lazy loading for code splitting
@@ -26,23 +26,23 @@ import { UnauthorizedPage } from '@/app/errors/UnauthorizedPage';
 import { LoginPage } from '@/app/login/LoginPage';
 
 // Lazy loaded pages (non-critical, code-split for better initial load)
-const LeaveApplicationPage = lazy(() => 
-  import('@/app/leave/LeaveApplicationPage').then(m => ({ default: m.LeaveApplicationPage }))
+const LeaveApplicationPage = lazy(() =>
+  import('@/app/leave/LeaveApplicationPage').then((m) => ({ default: m.LeaveApplicationPage }))
 );
-const LeaveHistoryPage = lazy(() => 
-  import('@/app/leave/LeaveHistoryPage').then(m => ({ default: m.LeaveHistoryPage }))
+const LeaveHistoryPage = lazy(() =>
+  import('@/app/leave/LeaveHistoryPage').then((m) => ({ default: m.LeaveHistoryPage }))
 );
-const ApprovalsPage = lazy(() => 
-  import('@/app/approvals/ApprovalsPage').then(m => ({ default: m.ApprovalsPage }))
+const ApprovalsPage = lazy(() =>
+  import('@/app/approvals/ApprovalsPage').then((m) => ({ default: m.ApprovalsPage }))
 );
-const CalendarPage = lazy(() => 
-  import('@/app/calendar/CalendarPage').then(m => ({ default: m.CalendarPage }))
+const CalendarPage = lazy(() =>
+  import('@/app/calendar/CalendarPage').then((m) => ({ default: m.CalendarPage }))
 );
-const ReportsPage = lazy(() => 
-  import('@/app/reports/ReportsPage').then(m => ({ default: m.ReportsPage }))
+const ReportsPage = lazy(() =>
+  import('@/app/reports/ReportsPage').then((m) => ({ default: m.ReportsPage }))
 );
-const AuditPage = lazy(() => 
-  import('@/app/audit/AuditPage').then(m => ({ default: m.AuditPage }))
+const AuditPage = lazy(() =>
+  import('@/app/audit/AuditPage').then((m) => ({ default: m.AuditPage }))
 );
 
 // Memoized loading fallback to prevent re-renders
@@ -58,18 +58,16 @@ const PageLoadingFallback = memo(function PageLoadingFallback() {
 });
 
 // Wrapper for lazy loaded routes with Suspense
-const LazyRoute = memo(function LazyRoute({ 
-  children, 
-  requiredRoles 
-}: { 
-  children: React.ReactNode; 
+const LazyRoute = memo(function LazyRoute({
+  children,
+  requiredRoles,
+}: {
+  children: React.ReactNode;
   requiredRoles?: string[];
 }) {
   return (
     <ProtectedRoute requiredRoles={requiredRoles}>
-      <Suspense fallback={<PageLoadingFallback />}>
-        {children}
-      </Suspense>
+      <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>
     </ProtectedRoute>
   );
 });

@@ -1,8 +1,9 @@
 /**
  * Auth Context & Provider
- * 
+ *
  * Manages authentication state, user profile, and role-based access control.
  */
+/* eslint-disable react-refresh/only-export-components */
 
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { clearTokens, getAccessToken, setTokens } from './tokens';
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initAuth();
-  }, []);
+  }, [apiBaseUrl]);
 
   const login = async (accessToken: string, refreshToken: string) => {
     try {

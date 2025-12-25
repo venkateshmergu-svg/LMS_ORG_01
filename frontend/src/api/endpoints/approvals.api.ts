@@ -1,6 +1,6 @@
 /**
  * Approvals API Endpoints
- * 
+ *
  * Uses step-based approval workflow from backend.
  */
 
@@ -33,7 +33,10 @@ export const approvalsAPI = {
    * POST /api/v1/leave-requests/steps/{step_id}/approve
    * Approve a workflow step (actor ID comes from JWT on backend)
    */
-  approve: async (stepId: string, action: ApprovalAction): Promise<{ leave_request_id: string; status: string; is_final: boolean }> => {
+  approve: async (
+    stepId: string,
+    action: ApprovalAction
+  ): Promise<{ leave_request_id: string; status: string; is_final: boolean }> => {
     const { data } = await apiClient.post(`/api/v1/leave-requests/steps/${stepId}/approve`, action);
     return data;
   },
@@ -42,7 +45,10 @@ export const approvalsAPI = {
    * POST /api/v1/leave-requests/steps/{step_id}/reject
    * Reject a workflow step (actor ID comes from JWT on backend)
    */
-  reject: async (stepId: string, action: ApprovalAction): Promise<{ leave_request_id: string; status: string; is_final: boolean }> => {
+  reject: async (
+    stepId: string,
+    action: ApprovalAction
+  ): Promise<{ leave_request_id: string; status: string; is_final: boolean }> => {
     const { data } = await apiClient.post(`/api/v1/leave-requests/steps/${stepId}/reject`, action);
     return data;
   },

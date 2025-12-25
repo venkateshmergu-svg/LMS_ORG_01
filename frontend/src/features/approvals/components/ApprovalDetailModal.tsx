@@ -38,7 +38,13 @@ export function ApprovalDetailModal({
   onClose,
 }: ApprovalDetailModalProps) {
   const [action, setAction] = useState<'approve' | 'reject' | null>(null);
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<ActionFormData>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<ActionFormData>({
     defaultValues: {
       comments: '',
     },
@@ -173,9 +179,7 @@ export function ApprovalDetailModal({
             >
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  {action === 'approve'
-                    ? 'Comments (Optional)'
-                    : 'Reason for Rejection (Required)'}
+                  {action === 'approve' ? 'Comments (Optional)' : 'Reason for Rejection (Required)'}
                 </label>
                 <textarea
                   {...register('comments', {

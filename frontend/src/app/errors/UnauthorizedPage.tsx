@@ -13,7 +13,8 @@ export function UnauthorizedPage() {
         <h1 className="text-6xl font-bold text-error mb-2">403</h1>
         <h2 className="text-2xl font-semibold mb-4">Access Denied</h2>
         <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md">
-          You do not have permission to access this resource. If you believe this is an error, please contact your administrator.
+          You do not have permission to access this resource. If you believe this is an error,
+          please contact your administrator.
         </p>
         <button onClick={() => navigate('/dashboard')} className="btn btn-primary">
           Return to Dashboard

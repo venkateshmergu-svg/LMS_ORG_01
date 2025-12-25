@@ -48,8 +48,7 @@ export interface LoadingState {
 export interface MutationState {
   isPending: boolean;
   error?: Error | null;
-  data?: any;
+  data?: unknown;
 }
 
 export type Role = 'EMPLOYEE' | 'MANAGER' | 'HR_ADMIN' | 'AUDITOR' | 'SYSTEM_ADMIN';
-

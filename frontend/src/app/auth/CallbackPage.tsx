@@ -91,7 +91,9 @@ export function CallbackPage() {
           <div className="w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full"></div>
         </div>
         <p className="text-gray-600 dark:text-gray-300 font-medium">Completing sign in...</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Please wait while we verify your credentials.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          Please wait while we verify your credentials.
+        </p>
       </div>
     </div>
   );

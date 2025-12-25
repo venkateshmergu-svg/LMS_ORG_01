@@ -1,6 +1,6 @@
 /**
  * Status Badge Utilities
- * 
+ *
  * Consistent status badge styling across the application
  */
 
@@ -9,7 +9,7 @@
  */
 export function getLeaveStatusClass(status: string): string {
   const statusUpper = status.toUpperCase();
-  
+
   switch (statusUpper) {
     case 'APPROVED':
       return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
@@ -29,7 +29,7 @@ export function getLeaveStatusClass(status: string): string {
  */
 export function getSyncStatusClass(status: string): string {
   const statusUpper = status.toUpperCase();
-  
+
   switch (statusUpper) {
     case 'SUCCESS':
       return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
@@ -49,7 +49,7 @@ export function getSyncStatusClass(status: string): string {
  */
 export function getActionBadgeClass(action: string): string {
   const actionLower = action.toLowerCase();
-  
+
   switch (actionLower) {
     case 'create':
       return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';

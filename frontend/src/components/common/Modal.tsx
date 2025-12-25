@@ -1,6 +1,6 @@
 /**
  * Modal Component
- * 
+ *
  * Accessible modal dialog with focus trap and keyboard navigation
  */
 
@@ -15,13 +15,13 @@ interface ModalProps {
   showCloseButton?: boolean;
 }
 
-export function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
   size = 'md',
-  showCloseButton = true 
+  showCloseButton = true,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
@@ -68,7 +68,7 @@ export function Modal({
     if (isOpen) {
       // Store currently focused element
       previousActiveElement.current = document.activeElement as HTMLElement;
-      
+
       // Set focus to modal
       setTimeout(() => {
         const firstFocusable = modalRef.current?.querySelector(
@@ -86,7 +86,7 @@ export function Modal({
       document.removeEventListener('keydown', handleEscape);
       document.removeEventListener('keydown', handleTab);
       document.body.style.overflow = 'unset';
-      
+
       // Restore focus to previous element
       if (!isOpen && previousActiveElement.current) {
         previousActiveElement.current.focus();
@@ -114,10 +114,7 @@ export function Modal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700">
-          <h2 
-            id="modal-title"
-            className="text-xl font-semibold text-gray-900 dark:text-white"
-          >
+          <h2 id="modal-title" className="text-xl font-semibold text-gray-900 dark:text-white">
             {title}
           </h2>
           {showCloseButton && (
@@ -142,9 +139,7 @@ export function Modal({
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4">
-          {children}
-        </div>
+        <div className="px-6 py-4">{children}</div>
       </div>
     </div>
   );

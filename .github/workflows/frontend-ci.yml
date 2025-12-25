@@ -1,0 +1,300 @@
+# ============================================================
+# LMS FRONTEND CI PIPELINE
+# ============================================================
+# Enforces quality gates aligned with Definition of Done
+# All checks must pass before merge is allowed
+# ============================================================
+
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/**'
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.18.0'
+
+jobs:
+  # ============================================================
+  # QUALITY GATES
+  # ============================================================
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      # ----------------------------------------------------------
+      # Setup
+      # ----------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for versioning
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify Node version
+        run: |
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          
+      # ----------------------------------------------------------
+      # Install Dependencies
+      # ----------------------------------------------------------
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+        
+      - name: Verify lockfile integrity
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "✅ package-lock.json exists"
+          else
+            echo "❌ package-lock.json missing!"
+            exit 1
+          fi
+
+      # ----------------------------------------------------------
+      # Type Safety Gate (MANDATORY)
+      # ----------------------------------------------------------
+      - name: TypeScript type check
+        run: npm run typecheck
+        
+      # ----------------------------------------------------------
+      # Lint Gate (MANDATORY)
+      # ----------------------------------------------------------
+      - name: ESLint check
+        run: npm run lint
+        
+      # ----------------------------------------------------------
+      # Format Check (MANDATORY)
+      # ----------------------------------------------------------
+      - name: Prettier format check
+        run: npm run format:check
+
+  # ============================================================
+  # BUILD
+  # ============================================================
+  build:
+    name: Build
+    needs: quality-gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit_sha: ${{ steps.version.outputs.commit_sha }}
+      artifact_name: ${{ steps.version.outputs.artifact_name }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      # ----------------------------------------------------------
+      # Determine Version
+      # ----------------------------------------------------------
+      - name: Determine version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          BUILD_NUMBER="${{ github.run_number }}"
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          ARTIFACT_NAME="lms-frontend-${VERSION}-${SHORT_SHA}"
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit_sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_number=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
+          echo "build_date=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          echo "artifact_name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
+          
+          echo "📦 Version: ${VERSION}"
+          echo "🔗 Commit: ${SHORT_SHA}"
+          echo "🏗️ Build: #${BUILD_NUMBER}"
+
+      # ----------------------------------------------------------
+      # Build Application
+      # ----------------------------------------------------------
+      - name: Build application
+        run: npm run build:only
+        env:
+          VITE_BUILD_VERSION: ${{ steps.version.outputs.version }}
+          VITE_BUILD_COMMIT: ${{ steps.version.outputs.commit_sha }}
+          VITE_BUILD_DATE: ${{ steps.version.outputs.build_date }}
+          VITE_BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+
+      # ----------------------------------------------------------
+      # Bundle Analysis
+      # ----------------------------------------------------------
+      - name: Analyze bundle size
+        run: |
+          echo "📊 Bundle Size Report"
+          echo "===================="
+          du -sh dist/
+          echo ""
+          echo "Asset breakdown:"
+          find dist -type f -name "*.js" -exec du -h {} \; | sort -hr | head -20
+          find dist -type f -name "*.css" -exec du -h {} \; | sort -hr | head -10
+
+      # ----------------------------------------------------------
+      # Create Build Manifest
+      # ----------------------------------------------------------
+      - name: Create build manifest
+        run: |
+          cat > dist/build-manifest.json << EOF
+          {
+            "version": "${{ steps.version.outputs.version }}",
+            "commit": "${{ steps.version.outputs.commit_sha }}",
+            "shortCommit": "${{ steps.version.outputs.short_sha }}",
+            "buildNumber": "${{ steps.version.outputs.build_number }}",
+            "buildDate": "${{ steps.version.outputs.build_date }}",
+            "branch": "${{ github.ref_name }}",
+            "workflow": "${{ github.workflow }}",
+            "runId": "${{ github.run_id }}"
+          }
+          EOF
+          cat dist/build-manifest.json
+
+      # ----------------------------------------------------------
+      # Upload Artifact
+      # ----------------------------------------------------------
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.artifact_name }}
+          path: frontend/dist
+          retention-days: 30
+          if-no-files-found: error
+
+  # ============================================================
+  # DEPLOYMENT GATES
+  # ============================================================
+  
+  # Development Deployment (auto-deploy on develop branch)
+  deploy-dev:
+    name: Deploy to Development
+    needs: build
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev.lms.company.com
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: dist
+
+      - name: Deploy to Development
+        run: |
+          echo "🚀 Deploying to Development environment"
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Commit: ${{ needs.build.outputs.commit_sha }}"
+          # Add actual deployment commands here (e.g., AWS S3 sync, Azure Blob, etc.)
+          # aws s3 sync dist/ s3://lms-frontend-dev/ --delete
+
+  # Test/UAT Deployment (requires approval)
+  deploy-test:
+    name: Deploy to Test/UAT
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+      url: https://test.lms.company.com
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: dist
+
+      - name: Deploy to Test/UAT
+        run: |
+          echo "🧪 Deploying to Test/UAT environment"
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Commit: ${{ needs.build.outputs.commit_sha }}"
+          # Add actual deployment commands here
+
+  # Production Deployment (manual trigger with approval)
+  deploy-prod:
+    name: Deploy to Production
+    needs: [build, deploy-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://lms.company.com
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: dist
+
+      - name: Pre-deployment verification
+        run: |
+          echo "🔍 Pre-deployment Verification"
+          echo "================================"
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Commit: ${{ needs.build.outputs.commit_sha }}"
+          cat dist/build-manifest.json
+
+      - name: Deploy to Production
+        run: |
+          echo "🚀 Deploying to Production environment"
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Commit: ${{ needs.build.outputs.commit_sha }}"
+          # Add actual deployment commands here
+          # aws s3 sync dist/ s3://lms-frontend-prod/ --delete
+          # aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+
+      - name: Post-deployment notification
+        run: |
+          echo "✅ Production deployment complete"
+          echo "Version ${{ needs.build.outputs.version }} is now live"

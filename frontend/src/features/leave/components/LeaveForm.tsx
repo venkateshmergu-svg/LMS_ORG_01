@@ -160,9 +160,7 @@ export function LeaveForm({ onSuccess }: LeaveFormProps) {
               <p className="text-xs text-gray-600 dark:text-gray-400">Available</p>
               <p
                 className={`text-lg font-bold ${
-                  insufficientBalance
-                    ? 'text-error'
-                    : 'text-success'
+                  insufficientBalance ? 'text-error' : 'text-success'
                 }`}
               >
                 {isBalanceLoading ? '...' : availableDays}
@@ -197,9 +195,7 @@ export function LeaveForm({ onSuccess }: LeaveFormProps) {
             />
           )}
         />
-        {errors.reason && (
-          <p className="text-error text-sm mt-1">✗ {errors.reason.message}</p>
-        )}
+        {errors.reason && <p className="text-error text-sm mt-1">✗ {errors.reason.message}</p>}
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {reasonText?.length || 0} / 1000 characters
         </p>

@@ -2,7 +2,7 @@
  * Dashboard Page
  *
  * Main landing page showing user summary, quick actions, and recent activity.
- * 
+ *
  * Performance optimizations:
  * - useMemo for computed values (pendingCount, thisMonthCount)
  * - Memoized child components where appropriate
@@ -23,12 +23,13 @@ export function DashboardPage() {
 
   // Memoize computed values to avoid recalculation on every render
   const { thisMonthCount } = useMemo(() => {
-    const thisMonth = requests?.items.filter((r) => {
-      const now = new Date();
-      const reqDate = new Date(r.start_date);
-      return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
-    }).length ?? 0;
-    
+    const thisMonth =
+      requests?.items.filter((r) => {
+        const now = new Date();
+        const reqDate = new Date(r.start_date);
+        return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
+      }).length ?? 0;
+
     return { thisMonthCount: thisMonth };
   }, [requests?.items]);
 
@@ -37,9 +38,7 @@ export function DashboardPage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold">
-            Welcome back, {user?.full_name || 'User'}!
-          </h1>
+          <h1 className="text-4xl font-bold">Welcome back, {user?.full_name || 'User'}!</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
             Here's your leave management summary
           </p>
@@ -151,7 +150,10 @@ export function DashboardPage() {
                 ) : (
                   <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                     <p>No leave requests yet</p>
-                    <Link to="/leave/apply" className="text-primary hover:underline text-sm mt-2 inline-block">
+                    <Link
+                      to="/leave/apply"
+                      className="text-primary hover:underline text-sm mt-2 inline-block"
+                    >
                       Create one now →
                     </Link>
                   </div>
