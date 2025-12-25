@@ -7,7 +7,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import and_, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..models.leave import (
     AccrualSchedule,
@@ -96,14 +96,45 @@ class LeaveRequestRepository(BaseRepository[LeaveRequest]):
         return list(self.session.execute(stmt).scalars().all())
 
     def list_approved_between(self, start: date, end: date) -> list[LeaveRequest]:
-        """List approved leave requests between date range (inclusive)."""
+        """List approved leave requests between date range (inclusive).
+        
+        Uses eager loading to avoid N+1 queries when accessing user and leave_type relationships.
+        """
         from ..core.enums import LeaveRequestStatus
 
         stmt = (
             select(LeaveRequest)
+            .options(
+                selectinload(LeaveRequest.user),
+                selectinload(LeaveRequest.leave_type),
+            )
             .where(LeaveRequest.status == LeaveRequestStatus.APPROVED)
             .where(LeaveRequest.start_date <= end)
             .where(LeaveRequest.end_date >= start)
+        )
+        return list(self.session.execute(stmt).scalars().all())
+    
+    def list_approved_between_paginated(
+        self, start: date, end: date, *, limit: int = 100, offset: int = 0
+    ) -> list[LeaveRequest]:
+        """List approved leave requests with pagination for large date ranges.
+        
+        Uses eager loading and pagination for memory-efficient batch processing.
+        """
+        from ..core.enums import LeaveRequestStatus
+
+        stmt = (
+            select(LeaveRequest)
+            .options(
+                selectinload(LeaveRequest.user),
+                selectinload(LeaveRequest.leave_type),
+            )
+            .where(LeaveRequest.status == LeaveRequestStatus.APPROVED)
+            .where(LeaveRequest.start_date <= end)
+            .where(LeaveRequest.end_date >= start)
+            .order_by(LeaveRequest.start_date)
+            .offset(offset)
+            .limit(limit)
         )
         return list(self.session.execute(stmt).scalars().all())
 

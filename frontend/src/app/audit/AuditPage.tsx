@@ -14,17 +14,14 @@
  * - Query optimization
  */
 
-import { useState, memo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { TableSkeleton } from '@/components/common/SkeletonLoaders';
+import type { AuditLog, PaginatedResponse } from '@/api/types/generated';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { Modal } from '@/components/common/Modal';
-import { formatDateTime } from '@/utils/formatters';
-import { getActionBadgeClass } from '@/utils/statusBadges';
+import { TableSkeleton } from '@/components/common/SkeletonLoaders';
 import { buttonSecondary, buttonText } from '@/utils/buttonStyles';
-import type { AuditLog, PaginatedResponse } from '@/api/types/generated';
+import { useQuery } from '@tanstack/react-query';
+import { memo, useCallback, useState } from 'react';
 
 // Memoized filters to prevent unnecessary re-renders
 const AuditFilters = memo(({
@@ -271,7 +268,7 @@ export function AuditPage() {
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${getActionBadgeClassLocal(log.action)}`}
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${getActionBadgeClass(log.action)}`}
                             >
                               {log.action}
                             </span>
@@ -332,7 +329,8 @@ export function AuditPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setPage(page - 1)}
-                      disabled={{buttonSecondary}
+                      disabled={page <= 0}
+                      className={buttonSecondary}
                       aria-label="Previous page"
                     >
                       Previous
@@ -341,8 +339,7 @@ export function AuditPage() {
                       onClick={() => setPage(page + 1)}
                       disabled={page >= totalPages - 1}
                       className={buttonSecondary}
-                      aria-label="Next page
-                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Next page"
                     >
                       Next
                     </button>
@@ -374,7 +371,7 @@ export function AuditPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     Action
-                  </label>Local
+                  </label>
                   <p className="mt-1">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${getActionBadgeClass(selectedLog.action)}`}
@@ -445,11 +442,11 @@ export function AuditPage() {
                 </div>
               )}
 
-              <div className{buttonSecondary}
-                  aria-label="Close audit log detail
+              <div className="flex justify-end">
                 <button
                   onClick={() => setSelectedLog(null)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className={buttonSecondary}
+                  aria-label="Close audit log details"
                 >
                   Close
                 </button>

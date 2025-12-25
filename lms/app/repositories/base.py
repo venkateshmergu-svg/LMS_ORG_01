@@ -5,6 +5,10 @@ Architectural constraint:
 - All mutations MUST emit audit events.
 
 Repositories should not contain business logic; engines/services own domain rules.
+
+Performance:
+- MAX_LIMIT enforced to prevent unbounded queries
+- Pagination support on all list operations
 """
 
 from __future__ import annotations
@@ -22,6 +26,9 @@ from .audit_repository import AuditRepository
 from .utils import dict_diff, model_to_dict
 
 TModel = TypeVar("TModel")
+
+# Maximum limit for list queries to prevent memory issues
+MAX_QUERY_LIMIT = 1000
 
 
 class BaseRepository(Generic[TModel]):
@@ -48,8 +55,29 @@ class BaseRepository(Generic[TModel]):
         return entity
 
     def list(self, *, limit: int = 100, offset: int = 0) -> list[TModel]:
-        stmt = select(self.model).offset(offset).limit(limit)
+        """List entities with pagination.
+        
+        Args:
+            limit: Maximum number of results (capped at MAX_QUERY_LIMIT)
+            offset: Number of results to skip
+            
+        Returns:
+            List of model instances
+        """
+        # Enforce maximum limit to prevent unbounded queries
+        effective_limit = min(limit, MAX_QUERY_LIMIT)
+        stmt = select(self.model).offset(offset).limit(effective_limit)
         return list(self.session.execute(stmt).scalars().all())
+    
+    def count(self) -> int:
+        """Count total number of entities.
+        
+        Useful for pagination metadata.
+        """
+        from sqlalchemy import func
+        stmt = select(func.count()).select_from(self.model)
+        result = self.session.execute(stmt).scalar()
+        return result or 0
 
     def add(self, entity: TModel, *, ctx: AuditContext, description: str | None = None) -> TModel:
         self.session.add(entity)

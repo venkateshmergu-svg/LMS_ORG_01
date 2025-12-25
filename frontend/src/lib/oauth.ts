@@ -13,6 +13,12 @@ export const oauthConfig = {
  * Generate authorization URL for OAuth provider
  */
 export function getAuthorizationUrl(): string {
+  // Local-dev fallback: if no external authority/clientId is configured,
+  // short-circuit to an internal callback route that the backend accepts.
+  if (!oauthConfig.authority || !oauthConfig.clientId) {
+    return `${window.location.origin}/auth/callback?code=dev`;
+  }
+
   const params = new URLSearchParams({
     client_id: oauthConfig.clientId,
     redirect_uri: oauthConfig.redirectUri,

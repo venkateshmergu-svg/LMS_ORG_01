@@ -14,19 +14,18 @@
  * - Query optimization with staleTime
  */
 
-import { useState, memo, useCallback } from 'react';
-import { useLeaveRequests } from '@/features/leave/hooks/useLeaveRequests';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveAPI } from '@/api/endpoints/leave.api';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { TableSkeleton } from '@/components/common/SkeletonLoaders';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { SuccessAlert } from '@/components/common/SuccessAlert';
-import { Modal } from '@/components/common/Modal';
-import { formatDate } from '@/utils/formatters';
-import { getLeaveStatusClass } from '@/utils/statusBadges';
-import { buttonPrimary, buttonSecondary, buttonDestructive, buttonText } from '@/utils/buttonStyles';
 import type { LeaveRequest } from '@/api/types/generated';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { Modal } from '@/components/common/Modal';
+import { TableSkeleton } from '@/components/common/SkeletonLoaders';
+import { SuccessAlert } from '@/components/common/SuccessAlert';
+import { useLeaveRequests } from '@/features/leave/hooks/useLeaveRequests';
+import { buttonDestructive, buttonSecondary, buttonText } from '@/utils/buttonStyles';
+import { formatDate } from '@/utils/formatters';
+import { getLeaveStatusClass as getStatusBadgeClass } from '@/utils/statusBadges';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { memo, useCallback, useState } from 'react';
 
 // Memoized filter component to prevent unnecessary re-renders
 const StatusFilter = memo(({ 
@@ -97,53 +96,7 @@ export function LeaveHistoryPage() {
     }
   }, [withdrawMutation]);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'WITHDRAWN':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'WITHDRAWN':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
-  };
+  // Use imported formatDate and getStatusBadgeClass from utilities
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

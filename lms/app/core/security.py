@@ -12,7 +12,7 @@ Architecture:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, cast
 from uuid import UUID
 
@@ -22,7 +22,7 @@ from jose import JWTError, jwt  # type: ignore[import-untyped]
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 
-from ..repositories import AuditRepository, UserRepository
+from ..repositories import UserRepository
 from .config import get_settings
 from .database import get_db
 from .enums import UserRole
@@ -84,7 +84,9 @@ def decode_token(token: str) -> TokenPayload:
         token_data = TokenPayload(**payload)
 
         # Check expiration
-        if token_data.exp and datetime.utcfromtimestamp(token_data.exp) < datetime.utcnow():
+        if token_data.exp and datetime.fromtimestamp(
+            token_data.exp, tz=timezone.utc
+        ) < datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired",
@@ -181,7 +183,7 @@ async def get_authenticated_user(
 
     return AuthenticatedUser(
         user_id=cast(UUID, user.id),
-        email=cast(str, user.email) if user.email else None,
+        email=cast(str, user.email) if user.email is not None else None,
         organization_id=cast(UUID, user.organization_id),
         roles=user_roles,
         sso_subject_id=token_data.oid,  # Azure AD oid for re-mapping
@@ -211,7 +213,7 @@ def create_access_token(
     if expires_delta is None:
         expires_delta = timedelta(hours=24)
 
-    expire = datetime.utcnow() + expires_delta
+    expire = datetime.now(timezone.utc) + expires_delta
 
     to_encode: Dict[str, Any] = {
         "sub": str(user_id),
@@ -220,10 +222,8 @@ def create_access_token(
         "exp": int(expire.timestamp()),
     }
 
-    encoded_jwt = jwt.encode(
+    return jwt.encode(
         to_encode,
         get_settings().SECRET_KEY or "your-secret-key",
         algorithm="HS256",
     )
-
-    return encoded_jwt

@@ -102,7 +102,7 @@ class FakeBalanceRepo:
         return self.balance
 
 
-def test_balance_on_submit_reserves_days():
+def test_balance_on_submit_reserves_days() -> None:
     """Test that submitting a leave request reserves days."""
     session = FakeSession()
     balance_repo = FakeBalanceRepo(initial_balance=10.0)
@@ -127,7 +127,7 @@ def test_balance_on_submit_reserves_days():
     assert "Reserve" in balance_repo.updates[0]["description"]
 
 
-def test_balance_on_submit_insufficient_balance():
+def test_balance_on_submit_insufficient_balance() -> None:
     """Test that submitting with insufficient balance raises error."""
     session = FakeSession()
     balance_repo = FakeBalanceRepo(initial_balance=2.0)
@@ -150,7 +150,7 @@ def test_balance_on_submit_insufficient_balance():
     assert exc_info.value.details["requested"] == 5.0
 
 
-def test_balance_on_approve_consumes_pending():
+def test_balance_on_approve_consumes_pending() -> None:
     """Test that approving a leave request moves PENDING → USED."""
     session = FakeSession()
     balance_repo = FakeBalanceRepo(initial_balance=10.0)
@@ -179,7 +179,7 @@ def test_balance_on_approve_consumes_pending():
     assert "Approve" in balance_repo.updates[1]["description"]
 
 
-def test_balance_on_reject_releases_pending():
+def test_balance_on_reject_releases_pending() -> None:
     """Test that rejecting a leave request releases PENDING → AVAILABLE."""
     session = FakeSession()
     balance_repo = FakeBalanceRepo(initial_balance=10.0)
@@ -206,7 +206,7 @@ def test_balance_on_reject_releases_pending():
     assert "Reject" in balance_repo.updates[1]["description"]
 
 
-def test_balance_on_withdraw_releases_pending():
+def test_balance_on_withdraw_releases_pending() -> None:
     """Test that withdrawing a leave request releases PENDING → AVAILABLE."""
     session = FakeSession()
     balance_repo = FakeBalanceRepo(initial_balance=10.0)
@@ -233,7 +233,7 @@ def test_balance_on_withdraw_releases_pending():
     assert "Withdraw" in balance_repo.updates[1]["description"]
 
 
-def test_balance_transitions_audit_trail():
+def test_balance_transitions_audit_trail() -> None:
     """Test that audit trail is recorded for each transition."""
     session = FakeSession()
     balance_repo = FakeBalanceRepo(initial_balance=10.0)

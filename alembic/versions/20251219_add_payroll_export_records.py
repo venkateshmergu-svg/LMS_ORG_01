@@ -1,6 +1,6 @@
 """Add payroll_export_records table for outbound idempotency tracking.
 
-Revision ID: 20251219_add_payroll_export_records
+Revision ID: 20251219_payroll_export
 Revises: None
 Create Date: 2025-12-19
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "20251219_add_payroll_export_records"
+revision = "20251219_payroll_export"
 down_revision: str | None = None
 branch_labels: list[str] | None = None
 depends_on: str | None = None

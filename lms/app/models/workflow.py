@@ -1,5 +1,10 @@
 """
 Leave request and workflow models.
+
+Performance indexes added for common query patterns:
+- user_id + status: filtering user's requests by status
+- status + start_date + end_date: date range queries for approved requests
+- user_id + start_date + end_date: overlap checking
 """
 from typing import Any
 
@@ -10,6 +15,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -32,7 +38,7 @@ class LeaveRequest(BaseModel):
     # Request number for reference
     request_number = Column(String(50), unique=True, nullable=False, index=True)
     
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index=True)
     leave_type_id = Column(UUID(as_uuid=True), ForeignKey('leave_types.id'), nullable=False)
     policy_id = Column(UUID(as_uuid=True), ForeignKey('leave_policies.id'), nullable=True)
     
@@ -88,6 +94,13 @@ class LeaveRequest(BaseModel):
     workflow_steps = relationship("WorkflowStep", back_populates="leave_request", order_by="WorkflowStep.step_order")
     leave_dates = relationship("LeaveRequestDate", back_populates="leave_request")
     comments = relationship("LeaveRequestComment", back_populates="leave_request")
+    
+    # Performance indexes for common query patterns
+    __table_args__ = (
+        Index('ix_leave_request_user_status', 'user_id', 'status'),
+        Index('ix_leave_request_status_dates', 'status', 'start_date', 'end_date'),
+        Index('ix_leave_request_user_dates', 'user_id', 'start_date', 'end_date'),
+    )
 
 
 class LeaveRequestDate(BaseModel):

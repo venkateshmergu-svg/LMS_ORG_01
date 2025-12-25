@@ -20,11 +20,9 @@ from sqlalchemy.orm import Session
 
 from ..core.enums import LeaveRequestStatus
 from ..core.exceptions import LeaveOverlapException, WorkflowNotFoundException
-from ..models.user import User
 from ..models.workflow import LeaveRequest, LeaveRequestComment, LeaveRequestDate
 from ..repositories import (
     AuditContext,
-    AuditRepository,
     LeaveRequestCommentRepository,
     LeaveRequestDateRepository,
     LeaveRequestRepository,
@@ -74,8 +72,7 @@ class LeaveEngine:
         ctx: AuditContext,
     ) -> LeaveRequestCreated:
         # Basic overlap check (generic correctness, not a business rule).
-        overlaps = self.request_repo.find_overlaps(user_id, start_date, end_date)
-        if overlaps:
+        if overlaps := self.request_repo.find_overlaps(user_id, start_date, end_date):
             raise LeaveOverlapException([{"request_id": str(r.id)} for r in overlaps])
 
         user = self.user_repo.get_required(user_id)
@@ -156,14 +153,14 @@ class LeaveEngine:
         # Determine approvers: start with user's manager
         # (In production, this would query a complex chain or policy rules)
         approver_ids: list[UUID] = []
-        if user.manager_id:
+        if user.manager_id is not None:
             approver_ids.append(cast(UUID, user.manager_id))
 
         if not approver_ids:
             raise WorkflowNotFoundException(leave_type=str(req.leave_type_id))
 
         # Instantiate workflow steps (creates step rows, marks first as PENDING)
-        steps = self.workflow_engine.instantiate_steps(
+        self.workflow_engine.instantiate_steps(
             leave_request=req,
             workflow=workflow_resolution.workflow,
             approver_ids_in_order=approver_ids,
@@ -172,7 +169,7 @@ class LeaveEngine:
 
         # Transition leave request to PENDING_APPROVAL
         now = datetime.now(timezone.utc)
-        updated = self.request_repo.update_fields(
+        return self.request_repo.update_fields(
             req,
             {
                 "status": LeaveRequestStatus.PENDING_APPROVAL,
@@ -181,8 +178,6 @@ class LeaveEngine:
             ctx=ctx,
             description="Submit leave request (workflow instantiated)",
         )
-
-        return updated
 
     def add_comment(
         self,
@@ -216,7 +211,7 @@ class LeaveEngine:
         Delegates to WorkflowEngine for state machine logic.
         Returns dict with leave_request, is_final, status.
         """
-        from .workflow_engine import StepActivated, WorkflowCompleted
+        from .workflow_engine import WorkflowCompleted
 
         result = self.workflow_engine.approve(
             step_id=step_id,
@@ -314,7 +309,6 @@ class LeaveEngine:
         Raises:
             EntityNotFoundException: if step not found
         """
-        from ..models.workflow import WorkflowStep
         from ..repositories import WorkflowStepRepository
 
         # Get the step
@@ -326,22 +320,97 @@ class LeaveEngine:
         setattr(step, "assigned_users", [cast(UUID, step.approver_id)])
         return step
 
-    def list_leave_requests(self, user_id: Optional[UUID] = None) -> list[LeaveRequest]:
-        """List leave requests, optionally filtered by user.
+    def list_leave_requests(
+        self,
+        user_id: Optional[UUID] = None,
+        *,
+        status: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[LeaveRequest]:
+        """List leave requests, optionally filtered by user and status.
 
         Args:
             user_id: Optional user ID to filter by
+            status: Optional status filter (maps frontend status to backend)
+            limit: Maximum number of results (default 100, max 1000)
+            offset: Number of results to skip for pagination
 
         Returns:
             List of LeaveRequest model instances
         """
-        if user_id:
-            from sqlalchemy import select
+        from sqlalchemy import select
 
-            stmt = select(LeaveRequest).where(LeaveRequest.user_id == user_id)
-            return list(self.session.execute(stmt).scalars().all())
-        else:
-            return self.request_repo.list()
+        from ..repositories.base import MAX_QUERY_LIMIT
+
+        # Enforce maximum limit
+        effective_limit = min(limit, MAX_QUERY_LIMIT)
+
+        stmt = select(LeaveRequest).order_by(LeaveRequest.created_at.desc())
+
+        if user_id:
+            stmt = stmt.where(LeaveRequest.user_id == user_id)
+
+        # Map frontend status to backend status enum values
+        if status and status.lower() not in ("all", ""):
+            status_mapping = {
+                "pending": [
+                    LeaveRequestStatus.DRAFT,
+                    LeaveRequestStatus.PENDING_APPROVAL,
+                ],
+                "approved": [LeaveRequestStatus.APPROVED],
+                "rejected": [LeaveRequestStatus.REJECTED],
+                "withdrawn": [
+                    LeaveRequestStatus.WITHDRAWN,
+                    LeaveRequestStatus.CANCELLED,
+                ],
+            }
+            if backend_statuses := status_mapping.get(status.lower()):
+                stmt = stmt.where(LeaveRequest.status.in_(backend_statuses))
+
+        stmt = stmt.offset(offset).limit(effective_limit)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def count_leave_requests(
+        self,
+        user_id: Optional[UUID] = None,
+        *,
+        status: Optional[str] = None,
+    ) -> int:
+        """Count leave requests, optionally filtered by user and status.
+
+        Args:
+            user_id: Optional user ID to filter by
+            status: Optional status filter
+
+        Returns:
+            Total count of matching leave requests
+        """
+        from sqlalchemy import func, select
+
+        stmt = select(func.count()).select_from(LeaveRequest)
+
+        if user_id:
+            stmt = stmt.where(LeaveRequest.user_id == user_id)
+
+        # Map frontend status to backend status enum values
+        if status and status.lower() not in ("all", ""):
+            status_mapping = {
+                "pending": [
+                    LeaveRequestStatus.DRAFT,
+                    LeaveRequestStatus.PENDING_APPROVAL,
+                ],
+                "approved": [LeaveRequestStatus.APPROVED],
+                "rejected": [LeaveRequestStatus.REJECTED],
+                "withdrawn": [
+                    LeaveRequestStatus.WITHDRAWN,
+                    LeaveRequestStatus.CANCELLED,
+                ],
+            }
+            if backend_statuses := status_mapping.get(status.lower()):
+                stmt = stmt.where(LeaveRequest.status.in_(backend_statuses))
+
+        return self.session.execute(stmt).scalar() or 0
 
     def get_leave_balance(self, user_id: UUID) -> dict:
         """Get leave balance summary for a user.
@@ -355,9 +424,7 @@ class LeaveEngine:
         from sqlalchemy import select
 
         from ..models.leave import LeaveBalance
-        from ..repositories import LeaveBalanceRepository
 
-        balance_repo = LeaveBalanceRepository(self.session)
         stmt = select(LeaveBalance).where(LeaveBalance.user_id == user_id)
         balances = list(self.session.execute(stmt).scalars().all())
 
@@ -366,19 +433,19 @@ class LeaveEngine:
             "balances": [
                 {
                     "leave_type_id": str(b.leave_type_id),
-                    "opening_balance": float(b.opening_balance),
-                    "accrued": float(b.accrued),
-                    "used": float(b.used),
-                    "pending": float(b.pending),
-                    "adjusted": float(b.adjusted),
-                    "carried_forward": float(b.carried_forward),
+                    "opening_balance": float(getattr(b, "opening_balance", 0)),
+                    "accrued": float(getattr(b, "accrued", 0)),
+                    "used": float(getattr(b, "used", 0)),
+                    "pending": float(getattr(b, "pending", 0)),
+                    "adjusted": float(getattr(b, "adjusted", 0)),
+                    "carried_forward": float(getattr(b, "carried_forward", 0)),
                     "available": float(
-                        b.opening_balance
-                        + b.accrued
-                        + b.adjusted
-                        + b.carried_forward
-                        - b.used
-                        - b.pending
+                        getattr(b, "opening_balance", 0)
+                        + getattr(b, "accrued", 0)
+                        + getattr(b, "adjusted", 0)
+                        + getattr(b, "carried_forward", 0)
+                        - getattr(b, "used", 0)
+                        - getattr(b, "pending", 0)
                     ),
                 }
                 for b in balances

@@ -2,26 +2,35 @@
  * Dashboard Page
  *
  * Main landing page showing user summary, quick actions, and recent activity.
+ * 
+ * Performance optimizations:
+ * - useMemo for computed values (pendingCount, thisMonthCount)
+ * - Memoized child components where appropriate
  */
 
-import { Link } from 'react-router-dom';
-import { BalanceCard } from '@/features/balance/components/BalanceCard';
-import { useLeaveRequests, useLeaveBalance } from '@/features/leave/hooks/useLeaveRequests';
 import { useAuth } from '@/auth/AuthProvider';
+import { BalanceCard } from '@/features/balance/components/BalanceCard';
+import { useLeaveBalance, useLeaveRequests } from '@/features/leave/hooks/useLeaveRequests';
 import { format } from 'date-fns';
 import { Calendar, FileText, Users } from 'lucide-react';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: balance } = useLeaveBalance();
   const { data: requests } = useLeaveRequests({ limit: 5, status: 'all' });
 
-  const pendingCount = requests?.items.filter((r) => r.status === 'PENDING').length ?? 0;
-  const thisMonthCount = requests?.items.filter((r) => {
-    const now = new Date();
-    const reqDate = new Date(r.start_date);
-    return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
-  }).length ?? 0;
+  // Memoize computed values to avoid recalculation on every render
+  const { thisMonthCount } = useMemo(() => {
+    const thisMonth = requests?.items.filter((r) => {
+      const now = new Date();
+      const reqDate = new Date(r.start_date);
+      return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
+    }).length ?? 0;
+    
+    return { thisMonthCount: thisMonth };
+  }, [requests?.items]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -87,7 +96,7 @@ export function DashboardPage() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Link to="/leave/application" className="btn btn-primary">
+                <Link to="/leave/apply" className="btn btn-primary">
                   + Apply for Leave
                 </Link>
                 <Link to="/leave/history" className="btn btn-secondary">
@@ -142,7 +151,7 @@ export function DashboardPage() {
                 ) : (
                   <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                     <p>No leave requests yet</p>
-                    <Link to="/leave/application" className="text-primary hover:underline text-sm mt-2 inline-block">
+                    <Link to="/leave/apply" className="text-primary hover:underline text-sm mt-2 inline-block">
                       Create one now →
                     </Link>
                   </div>

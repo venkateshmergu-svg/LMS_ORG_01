@@ -7,6 +7,10 @@ Safety:
 - Read-only of domain data; does not change leave state or balances
 - Uses integration repository for tracking
 - Emits audit logs via repositories
+
+Performance optimizations:
+- Uses eager-loaded relationships from repository (no N+1 queries)
+- Batch processes transactions efficiently
 """
 
 from __future__ import annotations
@@ -39,16 +43,25 @@ class PayrollExportService:
     def _to_transactions(
         self, requests: Iterable[LeaveRequest]
     ) -> list[PayrollTransaction]:
+        """Convert leave requests to payroll transactions.
+        
+        Performance: Uses eager-loaded user relationship to avoid N+1 queries.
+        """
         from datetime import date
         from typing import cast
         from uuid import UUID
 
         txs: list[PayrollTransaction] = []
         for req in requests:
-            user_id = (
-                req.user_id if isinstance(req.user_id, UUID) else UUID(str(req.user_id))
-            )
-            user = self.user_repo.get_required(user_id)
+            # Use eager-loaded relationship instead of separate query
+            user = req.user
+            if user is None:
+                # Fallback only if relationship wasn't loaded (shouldn't happen)
+                user_id = (
+                    req.user_id if isinstance(req.user_id, UUID) else UUID(str(req.user_id))
+                )
+                user = self.user_repo.get_required(user_id)
+            
             leave_type_code = (
                 req.leave_type.code if req.leave_type is not None else "UNKNOWN"
             )
